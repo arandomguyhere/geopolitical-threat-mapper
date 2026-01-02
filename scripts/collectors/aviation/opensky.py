@@ -1,11 +1,16 @@
 """
-OpenSky Network Aviation Collector
+Aviation Collector - Multi-Source Aircraft Tracking
 
 Real-time aircraft tracking for situational awareness:
 - Military aircraft detection
 - ADIZ violations
 - Unusual traffic patterns
 - Chokepoint monitoring
+
+Sources (in priority order):
+1. Airplanes.Live - Free, unfiltered ADS-B data
+2. ADS-B Exchange - Free tier available
+3. OpenSky Network - Fallback (auth required since 2025)
 """
 
 import asyncio
@@ -66,7 +71,7 @@ SPECIAL_MISSION_TYPES = [
 
 @dataclass
 class Aircraft:
-    """Aircraft data from OpenSky"""
+    """Aircraft data from aviation sources"""
     icao24: str
     callsign: Optional[str] = None
     origin_country: Optional[str] = None
@@ -87,6 +92,7 @@ class Aircraft:
     # Context
     region: Optional[str] = None
     squawk: Optional[str] = None  # transponder code
+    source: str = "unknown"  # Which API provided this data
 
 
 @dataclass
@@ -103,30 +109,43 @@ class AviationAnomaly:
 
 class OpenSkyCollector(BaseCollector):
     """
-    Collector for OpenSky Network API
+    Multi-source aviation collector with fallback support
 
-    API docs: https://openskynetwork.github.io/opensky-api/
+    Primary: Airplanes.Live (free, unfiltered)
+    Secondary: ADS-B Exchange API
+    Tertiary: OpenSky Network (requires OAuth2 since March 2025)
 
-    Rate limits:
-    - Anonymous: 10 requests/day
-    - Authenticated: 4000 credits/day
-
-    Endpoints:
-    - GET /api/states/all - All current state vectors
-    - GET /api/states/all?lamin=X&lamax=X&lomin=X&lomax=X - Bounding box
+    API docs:
+    - https://airplanes.live/api-guide/
+    - https://www.adsbexchange.com/data/
+    - https://openskynetwork.github.io/opensky-api/
     """
 
     def __init__(
         self,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        adsbx_api_key: Optional[str] = None,
         timeout: int = 30,
     ):
         self.username = username
         self.password = password
+        self.adsbx_api_key = adsbx_api_key
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: Optional[aiohttp.ClientSession] = None
-        self.base_url = "https://opensky-network.org/api"
+
+        # API endpoints
+        self.sources = {
+            "airplanes_live": "https://api.airplanes.live/v2",
+            "adsbx": "https://adsbexchange.com/api/aircraft/v2",
+            "opensky": "https://opensky-network.org/api",
+        }
+
+        # Track which source is working
+        self.active_source: Optional[str] = None
+
+        # For backwards compatibility
+        self.base_url = self.sources["airplanes_live"]
 
         # Chokepoint bounding boxes
         self.chokepoints = {
@@ -146,13 +165,14 @@ class OpenSkyCollector(BaseCollector):
 
     async def init_session(self):
         """Initialize HTTP session"""
-        auth = None
-        if self.username and self.password:
-            auth = aiohttp.BasicAuth(self.username, self.password)
+        headers = {
+            "User-Agent": "ThreatMapper/1.0 (research)",
+            "Accept": "application/json",
+        }
 
         self.session = aiohttp.ClientSession(
             timeout=self.timeout,
-            auth=auth,
+            headers=headers,
         )
 
     async def close(self):
@@ -201,67 +221,118 @@ class OpenSkyCollector(BaseCollector):
                 return region
         return None
 
-    def _parse_state_vector(self, state: List[Any]) -> Optional[Aircraft]:
-        """Parse OpenSky state vector into Aircraft object
-
-        State vector format:
-        [0] icao24, [1] callsign, [2] origin_country, [3] time_position,
-        [4] last_contact, [5] longitude, [6] latitude, [7] baro_altitude,
-        [8] on_ground, [9] velocity, [10] true_track, [11] vertical_rate,
-        [12] sensors, [13] geo_altitude, [14] squawk, [15] spi, [16] position_source
-        """
-        if len(state) < 17:
-            return None
-
-        icao24 = state[0]
-        callsign = state[1].strip() if state[1] else None
-        lat = state[6]
-        lon = state[5]
-
-        if lat is None or lon is None:
-            return None
-
-        category, is_military, is_special = self._classify_aircraft(icao24, callsign)
-        region = self._get_region(lat, lon)
-
-        last_contact = None
-        if state[4]:
-            try:
-                last_contact = datetime.utcfromtimestamp(state[4])
-            except (ValueError, TypeError):
-                pass
-
-        return Aircraft(
-            icao24=icao24,
-            callsign=callsign,
-            origin_country=state[2],
-            lat=lat,
-            lon=lon,
-            altitude=state[7] or state[13],  # baro or geo altitude
-            velocity=state[9],
-            heading=state[10],
-            vertical_rate=state[11],
-            on_ground=state[8] or False,
-            last_contact=last_contact,
-            category=category,
-            is_military=is_military,
-            is_special_mission=is_special,
-            region=region,
-            squawk=state[14],
-        )
-
-    async def _get_states(
+    async def _fetch_airplanes_live(
         self,
         lamin: Optional[float] = None,
         lamax: Optional[float] = None,
         lomin: Optional[float] = None,
         lomax: Optional[float] = None,
     ) -> List[Aircraft]:
-        """Get current aircraft states from OpenSky"""
+        """Fetch from Airplanes.Live API (free, unfiltered)"""
         if not self.session:
             await self.init_session()
 
-        url = f"{self.base_url}/states/all"
+        # Airplanes.Live uses point + radius or bounds
+        if all(v is not None for v in [lamin, lamax, lomin, lomax]):
+            # Calculate center point and radius
+            center_lat = (lamin + lamax) / 2
+            center_lon = (lomin + lomax) / 2
+            # Approximate radius in nautical miles
+            lat_diff = (lamax - lamin) * 60  # degrees to nm
+            lon_diff = (lomax - lomin) * 60 * 0.7  # rough cos adjustment
+            radius = max(lat_diff, lon_diff) / 2
+
+            url = f"{self.sources['airplanes_live']}/point/{center_lat}/{center_lon}/{int(radius)}"
+        else:
+            # Get all military aircraft
+            url = f"{self.sources['airplanes_live']}/mil"
+
+        try:
+            async with self.session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    self.active_source = "airplanes_live"
+                    return self._parse_airplanes_live(data, lamin, lamax, lomin, lomax)
+                else:
+                    logger.warning(f"Airplanes.Live returned {response.status}")
+                    return []
+        except Exception as e:
+            logger.warning(f"Airplanes.Live error: {e}")
+            return []
+
+    def _parse_airplanes_live(
+        self,
+        data: Dict[str, Any],
+        lamin: Optional[float] = None,
+        lamax: Optional[float] = None,
+        lomin: Optional[float] = None,
+        lomax: Optional[float] = None,
+    ) -> List[Aircraft]:
+        """Parse Airplanes.Live response format"""
+        aircraft_list = []
+
+        for ac in data.get("ac", []):
+            lat = ac.get("lat")
+            lon = ac.get("lon")
+
+            if lat is None or lon is None:
+                continue
+
+            # Filter by bounds if specified
+            if all(v is not None for v in [lamin, lamax, lomin, lomax]):
+                if not (lamin <= lat <= lamax and lomin <= lon <= lomax):
+                    continue
+
+            icao24 = ac.get("hex", "").lower()
+            callsign = ac.get("flight", "").strip() if ac.get("flight") else None
+
+            category, is_military, is_special = self._classify_aircraft(icao24, callsign)
+            region = self._get_region(lat, lon)
+
+            aircraft = Aircraft(
+                icao24=icao24,
+                callsign=callsign,
+                origin_country=ac.get("r", ""),  # registration country
+                lat=lat,
+                lon=lon,
+                altitude=ac.get("alt_baro") or ac.get("alt_geom"),
+                velocity=ac.get("gs"),  # ground speed in knots
+                heading=ac.get("track"),
+                vertical_rate=ac.get("baro_rate"),
+                on_ground=ac.get("alt_baro") == "ground",
+                category=category,
+                is_military=is_military or ac.get("dbFlags", 0) & 1,  # dbFlags bit 0 = military
+                is_special_mission=is_special,
+                region=region,
+                squawk=ac.get("squawk"),
+                source="airplanes_live",
+            )
+
+            # Parse last contact time
+            seen = ac.get("seen")
+            if seen is not None:
+                try:
+                    aircraft.last_contact = datetime.utcnow() - timedelta(seconds=float(seen))
+                except (ValueError, TypeError):
+                    pass
+
+            aircraft_list.append(aircraft)
+            self._last_states[aircraft.icao24] = aircraft
+
+        return aircraft_list
+
+    async def _fetch_opensky(
+        self,
+        lamin: Optional[float] = None,
+        lamax: Optional[float] = None,
+        lomin: Optional[float] = None,
+        lomax: Optional[float] = None,
+    ) -> List[Aircraft]:
+        """Fetch from OpenSky Network API (fallback)"""
+        if not self.session:
+            await self.init_session()
+
+        url = f"{self.sources['opensky']}/states/all"
         params = {}
 
         if all(v is not None for v in [lamin, lamax, lomin, lomax]):
@@ -273,33 +344,104 @@ class OpenSkyCollector(BaseCollector):
             }
 
         try:
-            async with self.session.get(url, params=params) as response:
+            # OpenSky now requires OAuth2 for new accounts
+            auth = None
+            if self.username and self.password:
+                auth = aiohttp.BasicAuth(self.username, self.password)
+
+            async with self.session.get(url, params=params, auth=auth) as response:
                 if response.status == 200:
                     data = await response.json()
-                    states = data.get("states", [])
-
-                    aircraft = []
-                    for state in states:
-                        ac = self._parse_state_vector(state)
-                        if ac:
-                            aircraft.append(ac)
-                            self._last_states[ac.icao24] = ac
-
-                    return aircraft
-
-                elif response.status == 429:
-                    logger.warning("OpenSky rate limit exceeded")
+                    self.active_source = "opensky"
+                    return self._parse_opensky(data)
+                elif response.status == 401:
+                    logger.warning("OpenSky requires authentication (OAuth2 since March 2025)")
                     return []
                 else:
-                    logger.warning(f"OpenSky API error: {response.status}")
+                    logger.warning(f"OpenSky returned {response.status}")
                     return []
-
-        except aiohttp.ClientError as e:
-            logger.error(f"OpenSky connection error: {e}")
+        except aiohttp.ClientConnectorError:
+            logger.warning("OpenSky Network unreachable")
             return []
         except Exception as e:
-            logger.error(f"OpenSky unexpected error: {e}")
+            logger.warning(f"OpenSky error: {e}")
             return []
+
+    def _parse_opensky(self, data: Dict[str, Any]) -> List[Aircraft]:
+        """Parse OpenSky state vector format"""
+        aircraft_list = []
+
+        for state in data.get("states", []):
+            if len(state) < 17:
+                continue
+
+            icao24 = state[0]
+            callsign = state[1].strip() if state[1] else None
+            lat = state[6]
+            lon = state[5]
+
+            if lat is None or lon is None:
+                continue
+
+            category, is_military, is_special = self._classify_aircraft(icao24, callsign)
+            region = self._get_region(lat, lon)
+
+            aircraft = Aircraft(
+                icao24=icao24,
+                callsign=callsign,
+                origin_country=state[2],
+                lat=lat,
+                lon=lon,
+                altitude=state[7] or state[13],
+                velocity=state[9],
+                heading=state[10],
+                vertical_rate=state[11],
+                on_ground=state[8] or False,
+                category=category,
+                is_military=is_military,
+                is_special_mission=is_special,
+                region=region,
+                squawk=state[14],
+                source="opensky",
+            )
+
+            if state[4]:
+                try:
+                    aircraft.last_contact = datetime.utcfromtimestamp(state[4])
+                except (ValueError, TypeError):
+                    pass
+
+            aircraft_list.append(aircraft)
+            self._last_states[aircraft.icao24] = aircraft
+
+        return aircraft_list
+
+    async def _get_states(
+        self,
+        lamin: Optional[float] = None,
+        lamax: Optional[float] = None,
+        lomin: Optional[float] = None,
+        lomax: Optional[float] = None,
+    ) -> List[Aircraft]:
+        """Get current aircraft states with source fallback"""
+        # Try sources in order
+        sources_to_try = [
+            ("airplanes_live", self._fetch_airplanes_live),
+            ("opensky", self._fetch_opensky),
+        ]
+
+        for source_name, fetch_func in sources_to_try:
+            try:
+                aircraft = await fetch_func(lamin, lamax, lomin, lomax)
+                if aircraft:
+                    logger.debug(f"Using {source_name}: {len(aircraft)} aircraft")
+                    return aircraft
+            except Exception as e:
+                logger.warning(f"{source_name} failed: {e}")
+                continue
+
+        logger.warning("All aviation sources failed")
+        return []
 
     async def get_chokepoint_aircraft(self, region: str) -> List[Aircraft]:
         """Get aircraft in a specific chokepoint region"""
@@ -324,7 +466,17 @@ class OpenSkyCollector(BaseCollector):
         if region:
             aircraft = await self.get_chokepoint_aircraft(region)
         else:
-            aircraft = await self._get_states()
+            # Try to get military-specific feed from Airplanes.Live
+            try:
+                url = f"{self.sources['airplanes_live']}/mil"
+                async with self.session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        aircraft = self._parse_airplanes_live(data)
+                    else:
+                        aircraft = await self._get_states()
+            except Exception:
+                aircraft = await self._get_states()
 
         military = [ac for ac in aircraft if ac.is_military]
 
@@ -421,6 +573,7 @@ class OpenSkyCollector(BaseCollector):
         return {
             "region": region,
             "timestamp": datetime.utcnow().isoformat(),
+            "source": self.active_source or "unknown",
             "total_aircraft": len(aircraft),
             "military_count": military_count,
             "special_mission_count": special_count,
@@ -462,7 +615,7 @@ class OpenSkyCollector(BaseCollector):
 
         return {
             "timestamp": datetime.utcnow().isoformat(),
-            "source": "opensky",
+            "source": self.active_source or "unknown",
             "aircraft": [self._aircraft_to_dict(ac) for ac in all_aircraft],
             "military_aircraft": [self._aircraft_to_dict(ac) for ac in all_military],
             "special_mission": [self._aircraft_to_dict(ac) for ac in all_special],
@@ -496,6 +649,7 @@ class OpenSkyCollector(BaseCollector):
             "is_special_mission": aircraft.is_special_mission,
             "region": aircraft.region,
             "squawk": aircraft.squawk,
+            "source": aircraft.source,
         }
 
     def _anomaly_to_dict(self, anomaly: AviationAnomaly) -> Dict[str, Any]:

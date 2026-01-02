@@ -121,7 +121,9 @@ class TestOpenSkyCollector:
     def test_init(self):
         """Test collector initialization"""
         collector = OpenSkyCollector()
-        assert collector.base_url == "https://opensky-network.org/api"
+        # Primary source is now Airplanes.Live (OpenSky requires OAuth2 since 2025)
+        assert collector.base_url == "https://api.airplanes.live/v2"
+        assert "opensky" in collector.sources  # OpenSky is fallback
         assert len(collector.chokepoints) == 8
 
     def test_classify_military_us(self):
