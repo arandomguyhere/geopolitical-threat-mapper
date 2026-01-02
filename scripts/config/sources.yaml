@@ -1,0 +1,467 @@
+# Data Sources Configuration
+# API keys should be set via environment variables in .env
+
+sources:
+  # ============================================================================
+  # YOUR EXISTING REPOS (FOUNDATION)
+  # ============================================================================
+  ais_tracker:
+    base_url: "${AIS_TRACKER_URL:-http://localhost:8080}"
+    endpoints:
+      vessels: "/api/vessels"
+      alerts: "/api/alerts"
+      dark_ships: "/api/dark-ships"
+      sanctions: "/api/sanctions/check"
+      cables: "/api/infrastructure/cables"
+      sar: "/api/sar/detections"
+    refresh_interval: 60
+    enabled: true
+
+  news_scraper:
+    feed_path: "${NEWS_SCRAPER_FEED:-../Google-News-Scraper/docs/feed.json}"
+    api_url: "${NEWS_SCRAPER_API_URL:-}"
+    refresh_interval: 900  # 15 minutes
+    enabled: true
+
+  # ============================================================================
+  # CYBER LAYER 1: INFRASTRUCTURE EXPOSURE
+  # ============================================================================
+  infrastructure:
+    shodan:
+      api_url: "https://api.shodan.io"
+      api_key: "${SHODAN_API_KEY}"
+      rate_limit:
+        requests: 100
+        period: "month"
+      priority: high
+      use_for:
+        - exposed_services
+        - country_infrastructure
+        - ics_scada
+        - vulnerabilities
+      enabled: true
+
+    criminal_ip:
+      api_url: "https://api.criminalip.io/v1"
+      api_key: "${CRIMINAL_IP_API_KEY}"
+      rate_limit:
+        requests: 50
+        period: "day"
+      priority: medium
+      use_for:
+        - ip_intelligence
+        - domain_intel
+        - combined_scanning
+      enabled: true
+
+    leakix:
+      api_url: "https://leakix.net"
+      api_key: "${LEAKIX_API_KEY}"
+      rate_limit:
+        requests: null  # free tier
+        period: "day"
+      priority: medium
+      use_for:
+        - exposed_data
+        - misconfigurations
+        - leaks
+      enabled: true
+
+    zoomeye:
+      api_url: "https://api.zoomeye.org"
+      api_key: "${ZOOMEYE_API_KEY}"
+      rate_limit:
+        requests: 20
+        period: "month"
+      priority: low
+      use_for:
+        - chinese_perspective
+        - alternative_scanning
+      enabled: true
+
+    netlas:
+      api_url: "https://app.netlas.io/api"
+      api_key: "${NETLAS_API_KEY}"
+      rate_limit:
+        requests: 50
+        period: "month"
+      priority: low
+      use_for:
+        - attack_surface
+        - certificate_data
+      enabled: true
+
+  # ============================================================================
+  # CYBER LAYER 2: THREAT ACTOR IOCs
+  # ============================================================================
+  threat_intel:
+    alienvault_otx:
+      api_url: "https://otx.alienvault.com/api/v1"
+      api_key: "${OTX_API_KEY}"
+      rate_limit:
+        requests: null  # unlimited
+        period: null
+      priority: high
+      use_for:
+        - pulses
+        - iocs
+        - apt_tracking
+        - malware_families
+      enabled: true
+
+    threatfox:
+      api_url: "https://threatfox-api.abuse.ch/api/v1"
+      api_key: null  # no auth required
+      rate_limit:
+        requests: null
+        period: null
+      priority: high
+      use_for:
+        - malware_iocs
+        - c2_servers
+        - botnet_tracking
+      enabled: true
+
+    urlhaus:
+      api_url: "https://urlhaus-api.abuse.ch/v1"
+      api_key: null
+      rate_limit:
+        requests: null
+        period: null
+      priority: medium
+      use_for:
+        - malware_urls
+        - payload_tracking
+      enabled: true
+
+    malwarebazaar:
+      api_url: "https://mb-api.abuse.ch/api/v1"
+      api_key: null
+      rate_limit:
+        requests: null
+        period: null
+      priority: medium
+      use_for:
+        - malware_samples
+        - hash_lookups
+      enabled: true
+
+    feodo:
+      download_url: "https://feodotracker.abuse.ch/downloads"
+      api_key: null
+      rate_limit:
+        requests: null
+        period: null
+      priority: high
+      use_for:
+        - botnet_c2
+        - emotet
+        - dridex
+        - trickbot
+        - qakbot
+      enabled: true
+
+    greynoise:
+      api_url: "https://api.greynoise.io/v3"
+      community_url: "https://api.greynoise.io/v3/community"
+      api_key: "${GREYNOISE_API_KEY}"
+      rate_limit:
+        requests: 50
+        period: "day"
+      priority: high
+      use_for:
+        - mass_scanning_detection
+        - noise_vs_targeted
+        - ip_classification
+      enabled: true
+
+    pulsedive:
+      api_url: "https://pulsedive.com/api"
+      api_key: "${PULSEDIVE_API_KEY}"
+      rate_limit:
+        requests: null  # free tier
+        period: null
+      priority: medium
+      use_for:
+        - ioc_enrichment
+        - threat_feeds
+      enabled: true
+
+  # ============================================================================
+  # CYBER LAYER 3: ATTACK TELEMETRY
+  # ============================================================================
+  telemetry:
+    dshield:
+      api_url: "https://isc.sans.edu/api"
+      api_key: "${DSHIELD_API_KEY}"
+      rate_limit:
+        requests: null
+        period: null
+      priority: high
+      use_for:
+        - top_attackers
+        - port_activity
+        - honeypot_data
+        - attack_trends
+      enabled: true
+
+    shadowserver:
+      dashboard_url: "https://dashboard.shadowserver.org"
+      api_key: "${SHADOWSERVER_API_KEY}"
+      rate_limit:
+        requests: null
+        period: null
+      priority: high
+      use_for:
+        - honeypot_data
+        - scan_data
+        - botnet_tracking
+      notes: "Apply for access at shadowserver.org"
+      enabled: true
+
+    firehol:
+      base_url: "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master"
+      lists:
+        - name: "firehol_level1"
+          file: "firehol_level1.netset"
+          severity: critical
+        - name: "firehol_level2"
+          file: "firehol_level2.netset"
+          severity: high
+        - name: "firehol_level3"
+          file: "firehol_level3.netset"
+          severity: medium
+        - name: "firehol_abusers_30d"
+          file: "firehol_abusers_30d.netset"
+          severity: high
+        - name: "spamhaus_drop"
+          file: "spamhaus_drop.netset"
+          severity: critical
+        - name: "spamhaus_edrop"
+          file: "spamhaus_edrop.netset"
+          severity: critical
+        - name: "dshield"
+          file: "dshield.netset"
+          severity: high
+      priority: high
+      enabled: true
+
+    dataplane:
+      base_url: "https://dataplane.org"
+      feeds:
+        - name: "sshpwauth"
+          url: "https://dataplane.org/sshpwauth.txt"
+          attack_type: "ssh_brute_force"
+        - name: "sipquery"
+          url: "https://dataplane.org/sipquery.txt"
+          attack_type: "sip_scan"
+        - name: "vncrfb"
+          url: "https://dataplane.org/vncrfb.txt"
+          attack_type: "vnc_brute_force"
+        - name: "dnsrd"
+          url: "https://dataplane.org/dnsrd.txt"
+          attack_type: "dns_recursion"
+      priority: medium
+      enabled: true
+
+    cins_army:
+      url: "https://cinsscore.com/list/ci-badguys.txt"
+      priority: medium
+      enabled: true
+
+  # ============================================================================
+  # CYBER LAYER 4: VULNERABILITY INTELLIGENCE
+  # ============================================================================
+  vulnerabilities:
+    nvd:
+      api_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+      api_key: "${NVD_API_KEY}"  # optional, better rate limits
+      rate_limit:
+        requests: 5
+        period: "30s"
+        with_key: 50
+      priority: high
+      use_for:
+        - cve_data
+        - cvss_scores
+        - affected_products
+      enabled: true
+
+    cvedb:
+      api_url: "https://cvedb.shodan.io"
+      api_key: null  # not required
+      rate_limit:
+        requests: null
+        period: null
+      priority: high
+      use_for:
+        - fast_cve_lookup
+        - cpe_matching
+        - epss_scores
+      enabled: true
+
+    cisa_kev:
+      download_url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+      refresh_interval: 86400  # daily
+      priority: critical
+      use_for:
+        - actively_exploited_cves
+        - remediation_deadlines
+      enabled: true
+
+    exploitdb:
+      download_url: "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
+      refresh_interval: 86400
+      priority: medium
+      use_for:
+        - exploit_availability
+        - poc_code
+      enabled: true
+
+  # ============================================================================
+  # AVIATION LAYER
+  # ============================================================================
+  aviation:
+    opensky:
+      api_url: "https://opensky-network.org/api"
+      username: "${OPENSKY_USERNAME}"
+      password: "${OPENSKY_PASSWORD}"
+      rate_limit:
+        anonymous: "10 requests/day"
+        authenticated: "4000 credits/day"
+      priority: high
+      use_for:
+        - real_time_flights
+        - state_vectors
+        - flight_history
+      enabled: true
+
+    adsb_exchange:
+      api_url: "https://adsbexchange-com1.p.rapidapi.com/v2"
+      api_key: "${ADSBX_API_KEY}"
+      rate_limit:
+        requests: null  # based on subscription
+        period: null
+      priority: medium
+      cost: "$10/month via RapidAPI"
+      use_for:
+        - unfiltered_military
+        - blocked_aircraft
+        - full_coverage
+      enabled: false  # enable if you have subscription
+
+  # ============================================================================
+  # GPS/GNSS INTERFERENCE
+  # ============================================================================
+  gps:
+    gpsjam:
+      url: "https://gpsjam.org"
+      data_format: "web_scrape"
+      refresh_interval: 86400  # daily
+      priority: high
+      use_for:
+        - daily_interference_map
+        - historical_data
+      enabled: true
+
+    skai_spoofing:
+      url: "https://spoofing.skai-data-services.com"
+      data_format: "web_scrape"
+      priority: medium
+      use_for:
+        - real_time_spoofing
+        - opensky_derived
+      enabled: true
+
+    flightradar24_gps:
+      url: "https://www.flightradar24.com/data/gps-jamming"
+      data_format: "web"
+      refresh_interval: 21600  # 6 hours
+      priority: medium
+      enabled: true
+
+  # ============================================================================
+  # GEOPOLITICAL EVENTS
+  # ============================================================================
+  events:
+    gdelt:
+      api_url: "https://api.gdeltproject.org/api/v2"
+      doc_api: "https://api.gdeltproject.org/api/v2/doc/doc"
+      geo_api: "https://api.gdeltproject.org/api/v2/geo/geo"
+      tv_api: "https://api.gdeltproject.org/api/v2/tv/tv"
+      rate_limit:
+        requests: null
+        period: null
+      refresh_interval: 900  # 15 min
+      priority: high
+      use_for:
+        - global_events
+        - sentiment_analysis
+        - news_correlation
+        - theme_tracking
+      enabled: true
+
+  # ============================================================================
+  # SANCTIONS DATA
+  # ============================================================================
+  sanctions:
+    ofac_sdn:
+      download_url: "https://www.treasury.gov/ofac/downloads/sdn.xml"
+      refresh_interval: 86400
+      priority: critical
+      enabled: true
+
+    ofac_consolidated:
+      download_url: "https://www.treasury.gov/ofac/downloads/consolidated/consolidated.xml"
+      refresh_interval: 86400
+      priority: critical
+      enabled: true
+
+    opensanctions:
+      api_url: "https://api.opensanctions.org"
+      api_key: "${OPENSANCTIONS_API_KEY}"
+      bulk_download: "https://data.opensanctions.org/datasets/latest"
+      priority: high
+      enabled: true
+
+    eu_sanctions:
+      download_url: "https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions"
+      refresh_interval: 86400
+      priority: high
+      enabled: true
+
+# ============================================================================
+# CACHING CONFIGURATION
+# ============================================================================
+cache:
+  enabled: true
+  ttl:
+    infrastructure_scan: 86400  # 24 hours
+    ioc_feeds: 3600  # 1 hour
+    blocklists: 21600  # 6 hours
+    vulnerabilities: 3600  # 1 hour
+    aviation: 300  # 5 minutes
+    events: 900  # 15 minutes
+    sanctions: 86400  # 24 hours
+
+# ============================================================================
+# RATE LIMIT STRATEGY
+# ============================================================================
+rate_limiting:
+  strategy: "stagger"
+  description: |
+    With limited free tiers, we optimize by:
+    1. Using unlimited sources as primary (OTX, DShield, abuse.ch)
+    2. Using limited sources for enrichment only (Shodan, Censys)
+    3. Caching aggressively (24h TTL for country-level data)
+    4. Prioritizing chokepoint regions
+
+  priority_order:
+    - alienvault_otx
+    - threatfox
+    - dshield
+    - firehol
+    - cisa_kev
+    - shodan
+    - greynoise
+    - nvd

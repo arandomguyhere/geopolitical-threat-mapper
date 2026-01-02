@@ -1,0 +1,483 @@
+# Correlation Rules Configuration
+# Cross-domain threat correlations based on 2024-2025 research
+
+# ============================================================================
+# CRITICAL PRIORITY RULES
+# ============================================================================
+rules:
+  # CRITICAL: Infrastructure Sabotage (Baltic Cable Pattern)
+  - id: shadow_fleet_cable_threat
+    name: "Shadow Fleet Cable Threat"
+    description: "Potential subsea cable sabotage by shadow fleet vessel"
+    priority: critical
+    research_basis: "7 Baltic cable cuts Nov 2024-Jan 2025, Eagle S incident"
+    triggers:
+      - source: ais_tracker
+        conditions:
+          - field: near_cable
+            operator: "=="
+            value: true
+          - field: ais_gap_hours
+            operator: ">="
+            value: 4
+      - source: ais_tracker
+        conditions:
+          - field: flag_change_recent
+            operator: "=="
+            value: true
+          - field: age_years
+            operator: ">="
+            value: 15
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "shadow fleet"
+              - "cable"
+              - "sabotage"
+              - "infrastructure"
+              - "baltic"
+      - source: cyber
+        conditions:
+          - field: gps_interference
+            value: true
+    correlation:
+      require_sources: 2
+      time_window_hours: 24
+      geo_radius_km: 100
+    actions:
+      - type: alert
+        severity: critical
+        message: "⚠️ CRITICAL: Potential infrastructure sabotage - {vessel_name} near {cable_name}"
+      - type: notify
+        channels: ["webhook", "email"]
+      - type: enrich
+        add_data: ["vessel_history", "ownership_chain", "flag_history"]
+
+  # CRITICAL: Sanctions Evasion STS
+  - id: sanctions_evasion_sts
+    name: "Sanctions Evasion STS Transfer"
+    description: "Ship-to-ship transfer involving sanctioned entity"
+    priority: critical
+    research_basis: "Dark STS transfers surged 2024-2025, Russia/Iran shadow fleets"
+    triggers:
+      - source: ais_tracker
+        conditions:
+          - field: event_type
+            value: "sts_transfer"
+      - source: ais_tracker
+        conditions:
+          - field: sanctions_match
+            value: true
+      - source: ais_tracker
+        conditions:
+          - field: ais_gap_before_sts
+            operator: ">="
+            value: 2  # hours
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "sanctions"
+              - "evasion"
+              - "dark fleet"
+              - "oil smuggling"
+    correlation:
+      require_sources: 2
+      time_window_hours: 48
+      regions:
+        - "black_sea"
+        - "persian_gulf"
+        - "south_china_sea"
+    actions:
+      - type: alert
+        severity: critical
+        message: "🚢 Sanctions evasion: STS transfer detected - {vessel_name}"
+      - type: flag
+        category: "sanctions_violation"
+
+  # CRITICAL: Chokepoint Attack
+  - id: chokepoint_attack
+    name: "Strategic Chokepoint Attack"
+    description: "Active attack at strategic maritime chokepoint"
+    priority: critical
+    research_basis: "190+ Houthi attacks Red Sea, 90% container drop"
+    triggers:
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "houthi"
+              - "attack"
+              - "missile"
+              - "drone"
+              - "vessel hit"
+      - source: ais_tracker
+        conditions:
+          - field: region
+            in:
+              - "red_sea"
+              - "bab_el_mandeb"
+              - "hormuz"
+          - field: distress_signal
+            value: true
+      - source: aviation
+        conditions:
+          - field: military_activity
+            value: true
+    correlation:
+      require_sources: 2
+      time_window_hours: 6
+      chokepoint_required: true
+    actions:
+      - type: alert
+        severity: critical
+        message: "🚨 ATTACK: {chokepoint_name} - {event_description}"
+      - type: update_risk_map
+        region: "{chokepoint_id}"
+        risk_delta: 30
+
+# ============================================================================
+# HIGH PRIORITY RULES
+# ============================================================================
+
+  # HIGH: Pre-Conflict Cyber Posturing
+  - id: preconflict_cyber
+    name: "Pre-Conflict Cyber Indicators"
+    description: "Cyber activity spike correlating with geopolitical tension"
+    priority: high
+    research_basis: "Dragos 2024: geopolitical tension → cyber attack correlation"
+    triggers:
+      - source: cyber
+        conditions:
+          - field: exposure_score_delta_24h
+            operator: ">="
+            value: 20  # 20% increase
+      - source: cyber
+        conditions:
+          - field: apt_ioc_count
+            operator: ">="
+            value: 10
+      - source: news_scraper
+        conditions:
+          - field: sentiment
+            value: "negative"
+          - field: threat_level
+            operator: ">="
+            value: 7
+      - source: aviation
+        conditions:
+          - field: military_aircraft_count
+            operator: ">="
+            value: 5
+    correlation:
+      require_sources: 3
+      time_window_hours: 72
+      region_match: true
+    actions:
+      - type: alert
+        severity: high
+        message: "🔴 Pre-conflict indicators in {region}: cyber+news+aviation correlation"
+      - type: increase_monitoring
+        region: "{region_id}"
+        factor: 2
+
+  # HIGH: GPS/GNSS Warfare Campaign
+  - id: gps_warfare
+    name: "GPS/GNSS Interference Campaign"
+    description: "Coordinated GPS interference affecting multiple domains"
+    priority: high
+    research_basis: "430,000 GPS incidents 2024, Kaliningrad/Crimea attribution"
+    triggers:
+      - source: gps
+        conditions:
+          - field: interference_detected
+            value: true
+          - field: intensity
+            operator: ">="
+            value: "moderate"
+      - source: aviation
+        conditions:
+          - field: gnss_anomalies
+            operator: ">="
+            value: 10
+      - source: ais_tracker
+        conditions:
+          - field: position_anomalies
+            operator: ">="
+            value: 5
+    correlation:
+      require_sources: 2
+      time_window_hours: 6
+      geo_radius_km: 500
+    actions:
+      - type: alert
+        severity: high
+        message: "📡 GPS interference campaign detected in {region}"
+      - type: map_overlay
+        layer: "gps_interference"
+
+  # HIGH: Chokepoint Disruption (Non-Attack)
+  - id: chokepoint_disruption
+    name: "Strategic Chokepoint Disruption"
+    description: "Major shipping/aviation disruption at strategic chokepoint"
+    priority: high
+    triggers:
+      - source: ais_tracker
+        conditions:
+          - field: traffic_deviation
+            operator: ">="
+            value: 30  # percent
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "blockade"
+              - "closure"
+              - "military exercise"
+              - "tension"
+      - source: aviation
+        conditions:
+          - field: notam_restriction
+            value: true
+    correlation:
+      require_sources: 2
+      time_window_hours: 12
+      chokepoint_required: true
+    actions:
+      - type: alert
+        severity: high
+        message: "🚨 Chokepoint disruption: {chokepoint_name} - {event_summary}"
+      - type: update_risk_map
+        region: "{chokepoint_id}"
+        risk_delta: 20
+
+  # HIGH: Taiwan Strait Escalation
+  - id: taiwan_strait_escalation
+    name: "Taiwan Strait Escalation"
+    description: "Elevated military activity in Taiwan Strait"
+    priority: high
+    research_basis: "Dec 2025: 130 aircraft, 100+ vessel drills"
+    triggers:
+      - source: aviation
+        conditions:
+          - field: region
+            value: "taiwan_strait"
+          - field: military_aircraft_count
+            operator: ">="
+            value: 20
+      - source: ais_tracker
+        conditions:
+          - field: region
+            value: "taiwan_strait"
+          - field: naval_vessel_count
+            operator: ">="
+            value: 10
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "taiwan"
+              - "china"
+              - "pla"
+              - "adiz"
+              - "exercise"
+    correlation:
+      require_sources: 2
+      time_window_hours: 24
+    actions:
+      - type: alert
+        severity: high
+        message: "🇹🇼 Taiwan Strait escalation: {aircraft_count} aircraft, {vessel_count} vessels"
+      - type: situation_report
+        template: "taiwan_sitrep"
+
+# ============================================================================
+# MEDIUM PRIORITY RULES
+# ============================================================================
+
+  # MEDIUM: APT Infrastructure Correlation
+  - id: apt_infrastructure
+    name: "APT Infrastructure Detection"
+    description: "Correlate APT news with exposed infrastructure"
+    priority: medium
+    triggers:
+      - source: news_scraper
+        conditions:
+          - field: apt_group
+            exists: true
+      - source: cyber
+        conditions:
+          - field: ioc_type
+            in: ["ip", "domain"]
+          - field: threat_type
+            value: "c2"
+    correlation:
+      require_sources: 2
+      time_window_hours: 168  # 1 week
+      entity_match:
+        - "ip"
+        - "domain"
+        - "apt_group"
+    actions:
+      - type: enrich
+        add_data:
+          - "shodan_scan"
+          - "otx_pulses"
+          - "whois"
+      - type: alert
+        severity: medium
+        message: "🎯 APT infrastructure correlation: {apt_group}"
+
+  # MEDIUM: Dark Vessel Behavioral Pattern
+  - id: dark_vessel_pattern
+    name: "Dark Vessel Behavioral Pattern"
+    description: "Vessel exhibiting dark fleet operational patterns"
+    priority: medium
+    research_basis: "Shadow fleet patterns: flag changes, AIS gaps, high-risk ports"
+    triggers:
+      - source: ais_tracker
+        conditions:
+          - field: ais_gap_count_30d
+            operator: ">="
+            value: 3
+          - field: flag_changes_12m
+            operator: ">="
+            value: 2
+      - source: ais_tracker
+        conditions:
+          - field: visits_high_risk_port
+            value: true
+          - field: vessel_age_years
+            operator: ">="
+            value: 15
+    correlation:
+      require_sources: 1  # AIS_Tracker internal
+    actions:
+      - type: flag
+        category: "shadow_fleet_candidate"
+      - type: alert
+        severity: medium
+        message: "🔍 Dark vessel pattern: {vessel_name} ({mmsi})"
+      - type: add_watchlist
+        list: "shadow_fleet_monitoring"
+
+  # MEDIUM: Critical Infrastructure Exposure
+  - id: critical_infra_exposure
+    name: "Critical Infrastructure Exposure"
+    description: "ICS/SCADA systems exposed in high-tension region"
+    priority: medium
+    triggers:
+      - source: cyber
+        conditions:
+          - field: service_type
+            in: ["modbus", "s7", "dnp3", "bacnet", "ics", "scada"]
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "critical infrastructure"
+              - "power grid"
+              - "water treatment"
+              - "energy"
+    correlation:
+      require_sources: 2
+      time_window_hours: 168
+      region_match: true
+    actions:
+      - type: alert
+        severity: medium
+        message: "⚡ Critical infrastructure exposure in {region}: {service_count} ICS/SCADA systems"
+
+# ============================================================================
+# SCORING CONFIGURATION
+# ============================================================================
+scoring:
+  # Cyber threat composite score weights
+  cyber:
+    exposed_infrastructure: 0.25
+    active_threats: 0.25
+    attack_volume: 0.20
+    vulnerability_exposure: 0.15
+    apt_activity: 0.15
+
+  # Regional threat composite score weights
+  regional:
+    cyber_score: 0.30
+    maritime_activity: 0.25
+    news_sentiment: 0.20
+    gps_interference: 0.15
+    aviation_anomaly: 0.10
+
+  # Correlation confidence modifiers
+  confidence:
+    base_single_source: 0.5
+    base_two_sources: 0.7
+    base_three_sources: 0.9
+    multi_source_bonus: 0.1  # per additional source
+    temporal_proximity_bonus: 0.1  # if within 1 hour
+    geo_proximity_bonus: 0.1  # if within 100km
+    entity_match_bonus: 0.15  # if entities match across sources
+    max_confidence: 1.0
+
+# ============================================================================
+# ENTITY MATCHING CONFIGURATION
+# ============================================================================
+entity_matching:
+  # Fields to match across sources
+  identifiers:
+    - mmsi
+    - imo
+    - ip_address
+    - domain
+    - vessel_name
+    - organization
+    - apt_group
+    - country_code
+    - hash_sha256
+    - hash_md5
+    - cve_id
+
+  # Fuzzy matching thresholds
+  fuzzy:
+    vessel_name_threshold: 0.85
+    organization_threshold: 0.80
+    domain_threshold: 0.90
+
+  # Normalization rules
+  normalize:
+    country_codes: true  # US -> USA, UK -> GBR
+    ip_addresses: true   # Expand CIDR
+    domains: true        # Strip subdomains
+    vessel_names: true   # Remove special chars, lowercase
+
+# ============================================================================
+# ALERT THRESHOLDS
+# ============================================================================
+thresholds:
+  # Cyber threat score triggers
+  cyber_threat_score:
+    critical: 85
+    high: 70
+    medium: 50
+    low: 30
+
+  # Minimum confidence for actions
+  correlation_confidence:
+    alert_minimum: 0.7
+    report_minimum: 0.5
+    log_minimum: 0.3
+
+  # Data freshness limits
+  freshness:
+    maritime_stale_minutes: 30
+    news_stale_minutes: 60
+    cyber_stale_hours: 24
+    aviation_stale_minutes: 5
+    gps_stale_hours: 24
+
+  # Anomaly detection
+  anomaly:
+    traffic_deviation_percent: 30
+    attack_volume_spike_percent: 50
+    exposure_increase_percent: 20

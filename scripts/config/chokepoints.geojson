@@ -1,0 +1,202 @@
+{
+  "type": "FeatureCollection",
+  "name": "Strategic Chokepoints",
+  "description": "Priority monitoring regions based on 2024-2025 geopolitical research",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "baltic_sea",
+        "name": "Baltic Sea",
+        "priority": "critical",
+        "threats": ["cable_sabotage", "shadow_fleet", "gps_jamming", "ais_manipulation"],
+        "active_incidents": true,
+        "notes": "7 cable cuts Nov 2024-Jan 2025, Eagle S, Fitburg seizures",
+        "cables": ["BCS East-West", "C-Lion1", "Estlink 2"],
+        "actors": ["Russia", "Shadow Fleet"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[9.0, 53.0], [30.0, 53.0], [30.0, 66.0], [9.0, 66.0], [9.0, 53.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "black_sea",
+        "name": "Black Sea",
+        "priority": "critical",
+        "threats": ["gps_spoofing", "dark_tankers", "sts_transfers", "ais_gaps"],
+        "active_incidents": true,
+        "notes": "16,000+ AIS gaps 2025, major STS transfer zone",
+        "actors": ["Russia", "Shadow Fleet"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[27.0, 40.0], [42.0, 40.0], [42.0, 47.0], [27.0, 47.0], [27.0, 40.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "red_sea",
+        "name": "Red Sea / Bab el-Mandeb",
+        "priority": "critical",
+        "threats": ["houthi_attacks", "vessel_rerouting", "uav_incursions", "missile_attacks"],
+        "active_incidents": true,
+        "notes": "190+ attacks by Oct 2024, 90% container shipping drop",
+        "actors": ["Houthi", "Iran-backed"],
+        "trade_impact": "$1 trillion disrupted Oct 2023-May 2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[32.0, 12.0], [44.0, 12.0], [44.0, 30.0], [32.0, 30.0], [32.0, 12.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "bab_el_mandeb",
+        "name": "Bab el-Mandeb Strait",
+        "priority": "critical",
+        "threats": ["houthi_attacks", "usv_attacks", "uuv_attacks", "small_boat_attacks"],
+        "active_incidents": true,
+        "notes": "20-mile chokepoint, 12% world commerce",
+        "width_nm": 20
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [43.3, 12.6]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "taiwan_strait",
+        "name": "Taiwan Strait",
+        "priority": "critical",
+        "threats": ["naval_surge", "adiz_violations", "apt_activity", "blockade_drills"],
+        "active_incidents": true,
+        "notes": "Dec 2025: 130 aircraft, 100+ vessels, 90 median line crossings",
+        "actors": ["China PLA", "APT40", "Volt Typhoon"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[116.0, 21.0], [122.0, 21.0], [122.0, 26.0], [116.0, 26.0], [116.0, 21.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "hormuz",
+        "name": "Strait of Hormuz",
+        "priority": "high",
+        "threats": ["tanker_seizure", "iran_navy", "surveillance_drones", "mine_threat"],
+        "active_incidents": false,
+        "notes": "20% of global oil, 30-mile strait",
+        "actors": ["Iran IRGC Navy"],
+        "width_nm": 30
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[54.0, 24.0], [58.0, 24.0], [58.0, 28.0], [54.0, 28.0], [54.0, 24.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "malacca",
+        "name": "Malacca Strait",
+        "priority": "high",
+        "threats": ["port_attacks", "trade_disruption", "military_transit", "piracy"],
+        "active_incidents": false,
+        "notes": "China trade lifeline, STS transfer zone",
+        "actors": []
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[98.0, 0.0], [105.0, 0.0], [105.0, 8.0], [98.0, 8.0], [98.0, 0.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "south_china_sea",
+        "name": "South China Sea",
+        "priority": "high",
+        "threats": ["territorial_disputes", "ew_infrastructure", "island_bases", "fishing_militia"],
+        "active_incidents": true,
+        "notes": "EW infrastructure on Fiery Cross, Mischief, Subi reefs",
+        "actors": ["China"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[105.0, 5.0], [120.0, 5.0], [120.0, 25.0], [105.0, 25.0], [105.0, 5.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "suez_canal",
+        "name": "Suez Canal",
+        "priority": "high",
+        "threats": ["rerouting_impact", "traffic_decline"],
+        "active_incidents": true,
+        "notes": "Transits dropped from 2,068 to 877 (Nov 2023-Oct 2024)",
+        "actors": []
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[32.3, 31.3], [32.5, 30.0]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "giuk_gap",
+        "name": "GIUK Gap",
+        "priority": "medium",
+        "threats": ["submarine_transit", "cable_vulnerability", "naval_activity"],
+        "active_incidents": false,
+        "notes": "Greenland-Iceland-UK gap, submarine chokepoint",
+        "actors": ["Russia Navy"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-30.0, 55.0], [-10.0, 55.0], [-10.0, 70.0], [-30.0, 70.0], [-30.0, 55.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "kaliningrad",
+        "name": "Kaliningrad Oblast",
+        "priority": "high",
+        "threats": ["gps_jamming", "gps_spoofing", "ew_operations"],
+        "active_incidents": true,
+        "notes": "Primary GPS interference source, 46,000 incidents Aug 2023-Apr 2024",
+        "actors": ["Russia EW Units"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[19.0, 54.0], [23.0, 54.0], [23.0, 56.0], [19.0, 56.0], [19.0, 54.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "crimea",
+        "name": "Crimea Peninsula",
+        "priority": "high",
+        "threats": ["gps_spoofing", "ais_manipulation", "naval_operations"],
+        "active_incidents": true,
+        "notes": "GPS spoofing source affecting Black Sea and Romanian airspace",
+        "actors": ["Russia"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[32.5, 44.0], [36.5, 44.0], [36.5, 46.0], [32.5, 46.0], [32.5, 44.0]]]
+      }
+    }
+  ]
+}
