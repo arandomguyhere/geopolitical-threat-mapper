@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+# Environment variables (contains API keys)
+.env
+.env.local
+.env.*.local
+
+# Output files
+output/
+*.log

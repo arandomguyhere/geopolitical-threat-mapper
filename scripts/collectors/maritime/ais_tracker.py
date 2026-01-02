@@ -100,12 +100,12 @@ class STSTransfer:
 class CableProximity:
     """Vessel near subsea cable"""
     vessel_mmsi: str
-    vessel_name: Optional[str] = None
     cable_name: str
     cable_type: str  # power, telecom, mixed
     distance_nm: float
     lat: float
     lon: float
+    vessel_name: Optional[str] = None
     is_anchored: bool = False
     is_drifting: bool = False
     ais_gap_before: bool = False
