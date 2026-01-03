@@ -22,10 +22,7 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
-# Add scripts to path
-sys.path.insert(0, str(Path(__file__).parent / "scripts"))
-
-from collectors import (
+from scripts.collectors import (
     InfrastructureCollector,
     IOCCollector,
     TelemetryCollector,
@@ -35,7 +32,7 @@ from collectors import (
     OpenSkyCollector,
     GPSJamCollector,
 )
-from processors import CorrelationEngine
+from scripts.processors import CorrelationEngine
 
 # Configure logging
 logging.basicConfig(
