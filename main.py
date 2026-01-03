@@ -104,7 +104,7 @@ class ThreatMapper:
         # IOCs (OTX, ThreatFox, etc.)
         otx_key = self._get_env("OTX_API_KEY")
         try:
-            async with IOCCollector(otx_api_key=otx_key) as collector:
+            async with IOCCollector() as collector:
                 data = await collector.collect_all()
                 results["iocs"] = data.get("iocs", [])
                 logger.info(f"Collected {len(results['iocs'])} IOCs")
