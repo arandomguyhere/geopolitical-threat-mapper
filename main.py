@@ -76,6 +76,9 @@ class ThreatMapper:
         # Collector instances (initialized on demand)
         self._collectors = {}
 
+        # Store collected data for output generation
+        self.collected_data = {}
+
     def _get_env(self, key: str, default: str = "") -> str:
         """Get environment variable"""
         return os.getenv(key, default)
@@ -287,8 +290,15 @@ class ThreatMapper:
 
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
-        # 1. Threat feed (JSON)
+        # 1. Threat feed (JSON) - includes raw data for UI
         feed = self.engine.export_feed()
+        # Add raw collected data for UI consumption
+        if hasattr(self, 'collected_data'):
+            feed["cyber"] = self.collected_data.get("cyber", {})
+            feed["maritime"] = self.collected_data.get("maritime", {})
+            feed["aviation"] = self.collected_data.get("aviation", {})
+            feed["gps"] = self.collected_data.get("gps", {})
+            feed["news"] = self.collected_data.get("news", {})
         feed_path = self.output_dir / "feed.json"
         with open(feed_path, "w", encoding="utf-8") as f:
             json.dump(feed, f, indent=2, default=str, ensure_ascii=False)
@@ -331,7 +341,7 @@ class ThreatMapper:
         logger.info("=" * 60)
 
         # Step 1: Collect data
-        await self.run_collection()
+        self.collected_data = await self.run_collection()
 
         # Step 2: Run correlation
         correlations = self.run_correlation()
