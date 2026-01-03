@@ -481,6 +481,18 @@ class AISTrackerCollector(BaseCollector):
         if regions is None:
             regions = list(self.chokepoints.keys())
 
+        # Quick health check - fail fast if server is unavailable
+        try:
+            if not self.session:
+                await self.init_session()
+            async with self.session.get(f"{self.base_url}/health", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                if resp.status != 200:
+                    logger.warning(f"AIS_Tracker server unavailable (status {resp.status}) - skipping maritime collection")
+                    return self._empty_result()
+        except Exception as e:
+            logger.warning(f"AIS_Tracker server not running at {self.base_url} - skipping maritime collection")
+            return self._empty_result()
+
         all_vessels = []
         all_dark_ships = []
         all_alerts = []
@@ -528,6 +540,26 @@ class AISTrackerCollector(BaseCollector):
                 "sts_transfers": len(all_sts),
                 "active_alerts": len(all_alerts),
                 "cable_risks": len(all_cable),
+            }
+        }
+
+    def _empty_result(self) -> Dict[str, Any]:
+        """Return empty result when server is unavailable"""
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "source": "ais_tracker",
+            "vessels": [],
+            "dark_ships": [],
+            "alerts": [],
+            "sts_transfers": [],
+            "cable_proximity": [],
+            "chokepoint_summaries": {},
+            "statistics": {
+                "total_vessels": 0,
+                "dark_ships": 0,
+                "sts_transfers": 0,
+                "active_alerts": 0,
+                "cable_risks": 0,
             }
         }
 
