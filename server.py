@@ -44,8 +44,6 @@ DASHBOARD_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geopolitical Threat Mapper</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
@@ -302,7 +300,6 @@ DASHBOARD_HTML = """
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
         // Initialize map
         const map = L.map('map', {
@@ -317,23 +314,27 @@ DASHBOARD_HTML = """
             attribution: '&copy; OpenStreetMap, &copy; CARTO'
         }).addTo(map);
 
-        // Layer groups
+        // Layer groups - no clustering for aircraft so they show individually
         const layers = {
             gps: L.layerGroup().addTo(map),
-            aviation: L.markerClusterGroup({
-                iconCreateFunction: function(cluster) {
-                    const count = cluster.getChildCount();
-                    return L.divIcon({
-                        html: '<div style="background:#3498db;color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:bold;border:2px solid white;">' + count + '</div>',
-                        className: 'aircraft-cluster',
-                        iconSize: [40, 40]
-                    });
-                }
-            }).addTo(map),
+            aviation: L.layerGroup().addTo(map),
             chokepoints: L.layerGroup().addTo(map),
             vessels: L.layerGroup(),
             cyber: L.layerGroup().addTo(map)
         };
+
+        // Create rotated aircraft icon based on heading
+        function createAircraftIcon(heading, isMilitary) {
+            const color = isMilitary ? '#e94560' : '#3498db';
+            const size = isMilitary ? 24 : 18;
+            const rotation = heading || 0;
+            return L.divIcon({
+                html: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${rotation}deg);" fill="${color}"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`,
+                className: 'aircraft-icon',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+        }
 
         // Custom icons using SVG
         const icons = {
@@ -462,7 +463,11 @@ DASHBOARD_HTML = """
                     const isMilitary = ac.is_military || ac.category === 'military';
                     if (isMilitary) militaryCount++;
 
-                    const icon = isMilitary ? icons.military : icons.civilian;
+                    // Get heading/track for rotation (0 = North, 90 = East, etc.)
+                    const heading = ac.heading || ac.true_track || ac.track || 0;
+
+                    // Create rotated icon based on heading
+                    const icon = createAircraftIcon(heading, isMilitary);
 
                     const marker = L.marker([lat, lon], { icon: icon })
                         .bindPopup(`
@@ -470,6 +475,7 @@ DASHBOARD_HTML = """
                             <div class="popup-row"><strong>Type:</strong> ${isMilitary ? 'Military' : 'Civilian'}</div>
                             <div class="popup-row"><strong>Altitude:</strong> ${ac.altitude || ac.baro_altitude || 'N/A'} ft</div>
                             <div class="popup-row"><strong>Speed:</strong> ${ac.velocity || ac.ground_speed || 'N/A'} kts</div>
+                            <div class="popup-row"><strong>Heading:</strong> ${heading.toFixed(0)}deg</div>
                             <div class="popup-row"><strong>Region:</strong> ${ac.region || 'N/A'}</div>
                         `);
 
