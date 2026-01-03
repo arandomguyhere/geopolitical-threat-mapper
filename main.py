@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -99,7 +99,11 @@ class ThreatMapper:
             try:
                 async with InfrastructureCollector() as collector:
                     data = await collector.collect_all_priority_countries()
-                    results["exposed_services"] = list(data.values()) if data else []
+                    # Convert CountryExposure dataclass objects to dicts for JSON serialization
+                    results["exposed_services"] = [
+                        exp.to_dict() if hasattr(exp, 'to_dict') else exp
+                        for exp in data.values()
+                    ] if data else []
                     logger.info(f"Collected exposure data for {len(results['exposed_services'])} countries")
             except Exception as e:
                 logger.error(f"Infrastructure collection error: {e}")
@@ -288,7 +292,7 @@ class ThreatMapper:
         """Generate output files"""
         logger.info("Generating output files...")
 
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
         # 1. Threat feed (JSON) - includes raw data for UI
         feed = self.engine.export_feed()
@@ -334,7 +338,7 @@ class ThreatMapper:
 
     async def run(self):
         """Run the complete threat mapping pipeline"""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         logger.info("=" * 60)
         logger.info("GEOPOLITICAL THREAT MAPPER")
         logger.info(f"Started at: {start_time.isoformat()}Z")
@@ -350,7 +354,7 @@ class ThreatMapper:
         outputs = self.generate_outputs()
 
         # Summary
-        elapsed = (datetime.utcnow() - start_time).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info("=" * 60)
         logger.info("COLLECTION COMPLETE")
         logger.info(f"Duration: {elapsed:.1f} seconds")

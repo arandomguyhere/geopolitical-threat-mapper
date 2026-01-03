@@ -14,7 +14,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -533,22 +533,94 @@ DASHBOARD_HTML = """
         function processCyberData(cyberData) {
             layers.cyber.clearLayers();
 
-            // Add markers for exposed services by country (simplified)
-            const exposedServices = cyberData.exposed_services || [];
-
             // Country coordinates (simplified)
             const countryCoords = {
                 'CN': [35, 105], 'RU': [60, 100], 'US': [38, -97],
                 'IR': [32, 53], 'KP': [40, 127], 'UA': [49, 32],
-                'TW': [23.5, 121], 'IL': [31, 35], 'SA': [24, 45]
+                'TW': [23.5, 121], 'IL': [31, 35], 'SA': [24, 45],
+                'DE': [51, 10], 'FR': [46, 2], 'GB': [54, -2],
+                'NL': [52, 5], 'JP': [36, 138], 'KR': [36, 128],
+                'IN': [20, 77], 'BR': [-15, -47], 'AU': [-25, 135],
+                'CA': [56, -106], 'IT': [42, 12], 'ES': [40, -4],
+                'PL': [52, 20], 'TR': [39, 35], 'VN': [16, 108],
+                'TH': [15, 100], 'ID': [-5, 120], 'MX': [23, -102],
+                'AR': [-34, -64], 'ZA': [-30, 25], 'EG': [27, 30],
+                'PK': [30, 70], 'BD': [24, 90], 'PH': [12, 122],
+                'MY': [4, 101], 'SG': [1, 104], 'HK': [22, 114],
+                'AE': [24, 54], 'BY': [53, 28], 'CZ': [50, 15],
+                'RO': [46, 25], 'HU': [47, 20], 'SE': [62, 15],
+                'NO': [62, 10], 'FI': [64, 26], 'DK': [56, 10],
+                'AT': [47, 13], 'CH': [47, 8], 'BE': [50, 4],
+                'PT': [39, -8], 'GR': [39, 22], 'CL': [-35, -71],
+                'CO': [4, -72], 'PE': [-10, -76], 'VE': [7, -66],
+                'NG': [10, 8], 'KE': [-1, 38], 'MA': [32, -5],
+                'DZ': [28, 3], 'LT': [55, 24], 'LV': [57, 25],
+                'EE': [59, 26], 'SK': [48, 19], 'BG': [43, 25],
+                'RS': [44, 21], 'HR': [45, 16], 'SI': [46, 15],
+                'IE': [53, -8], 'NZ': [-41, 174]
             };
 
+            // Track IOC counts by country for aggregation
+            const countryIOCs = {};
+
+            // Process IOCs (C2 servers, malware, etc.)
+            const iocs = cyberData.iocs || [];
+            iocs.forEach(ioc => {
+                const country = ioc.country;
+                if (country && countryCoords[country]) {
+                    if (!countryIOCs[country]) {
+                        countryIOCs[country] = {
+                            count: 0,
+                            c2: 0,
+                            malware: 0,
+                            botnet: 0,
+                            families: new Set()
+                        };
+                    }
+                    countryIOCs[country].count++;
+                    if (ioc.threat_type === 'c2') countryIOCs[country].c2++;
+                    if (ioc.threat_type === 'malware') countryIOCs[country].malware++;
+                    if (ioc.threat_type === 'botnet') countryIOCs[country].botnet++;
+                    if (ioc.malware_family) countryIOCs[country].families.add(ioc.malware_family);
+                }
+            });
+
+            // Add IOC markers by country
+            Object.entries(countryIOCs).forEach(([code, data]) => {
+                const coords = countryCoords[code];
+                if (coords) {
+                    const score = Math.min(100, data.count * 5 + data.c2 * 10);
+                    const color = score >= 80 ? threatColors.critical :
+                                  score >= 50 ? threatColors.high :
+                                  score >= 20 ? threatColors.medium : threatColors.low;
+
+                    const families = Array.from(data.families).slice(0, 5).join(', ') || 'Unknown';
+
+                    L.circleMarker(coords, {
+                        radius: Math.min(25, 10 + data.count / 2),
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.6,
+                        weight: 2
+                    }).addTo(layers.cyber).bindPopup(`
+                        <div class="popup-title">Cyber Threats: ${code}</div>
+                        <div class="popup-row"><strong>Total IOCs:</strong> ${data.count}</div>
+                        <div class="popup-row"><strong>C2 Servers:</strong> ${data.c2}</div>
+                        <div class="popup-row"><strong>Botnet:</strong> ${data.botnet}</div>
+                        <div class="popup-row"><strong>Malware:</strong> ${families}</div>
+                    `);
+                }
+            });
+
+            // Also add markers for exposed services (if Shodan data available)
+            const exposedServices = cyberData.exposed_services || [];
             exposedServices.forEach(exposure => {
                 const code = exposure.country_code;
                 const coords = countryCoords[code];
 
-                if (coords) {
-                    const score = exposure.threat_score || 50;
+                // Skip if already have IOC marker for this country
+                if (coords && !countryIOCs[code]) {
+                    const score = exposure.threat_score || exposure.risk_score || 50;
                     const color = score >= 80 ? threatColors.critical :
                                   score >= 60 ? threatColors.high :
                                   score >= 40 ? threatColors.medium : threatColors.low;
@@ -567,6 +639,13 @@ DASHBOARD_HTML = """
                     `);
                 }
             });
+
+            // Update cyber threat count in stats
+            const totalCyberThreats = Object.values(countryIOCs).reduce((sum, d) => sum + d.count, 0);
+            if (totalCyberThreats > 0) {
+                // Could update a stat counter here if we add one
+                console.log(`Loaded ${totalCyberThreats} cyber IOCs from ${Object.keys(countryIOCs).length} countries`);
+            }
         }
 
         async function loadAISData() {
@@ -662,7 +741,7 @@ def get_feed():
             return jsonify(json.load(f))
 
     return jsonify({
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "aviation": {"aircraft": []},
         "gps": {"interference_zones": []},
         "cyber": {"exposed_services": []},
