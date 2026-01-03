@@ -99,7 +99,11 @@ class ThreatMapper:
             try:
                 async with InfrastructureCollector() as collector:
                     data = await collector.collect_all_priority_countries()
-                    results["exposed_services"] = list(data.values()) if data else []
+                    # Convert CountryExposure dataclass objects to dicts for JSON serialization
+                    results["exposed_services"] = [
+                        exp.to_dict() if hasattr(exp, 'to_dict') else exp
+                        for exp in data.values()
+                    ] if data else []
                     logger.info(f"Collected exposure data for {len(results['exposed_services'])} countries")
             except Exception as e:
                 logger.error(f"Infrastructure collection error: {e}")

@@ -63,6 +63,26 @@ class CountryExposure:
     risk_score: float = 0.0
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization (UI-compatible field names)"""
+        return {
+            "country_code": self.country_code,
+            "country_name": self.country_name,
+            "total_exposed": self.total_exposed,
+            "critical_vulns": self.critical_vulns,
+            "exposed_ics_scada": self.exposed_ics_scada,
+            "ics_count": self.exposed_ics_scada,  # UI alias
+            "exposed_databases": self.exposed_databases,
+            "exposed_webcams": self.exposed_webcams,
+            "exposed_rdp": self.exposed_rdp,
+            "exposed_ssh": self.exposed_ssh,
+            "top_services": self.top_services,
+            "top_vulns": self.top_vulns,
+            "risk_score": self.risk_score,
+            "threat_score": self.risk_score,  # UI alias
+            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+        }
+
 
 class InfrastructureCollector(BaseCollector):
     """
