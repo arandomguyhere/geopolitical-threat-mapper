@@ -119,9 +119,11 @@ python server.py --port 9000
 | AlienVault OTX | APT pulses, IOCs | Unlimited |
 | abuse.ch ThreatFox | Malware C2 servers | Unlimited |
 | abuse.ch URLhaus | Malware URLs | Unlimited |
+| abuse.ch Feodo | Botnet C2 IPs (with country) | Unlimited |
 | DShield/SANS ISC | Attack trends | Unlimited |
 | FireHOL | IP blocklists | Unlimited |
 | CISA KEV | Exploited CVEs | Unlimited |
+| Shodan CVEDB | CVE lookups | Unlimited |
 
 ### Cyber Intelligence (Rate Limited)
 
@@ -136,8 +138,11 @@ python server.py --port 9000
 
 | Source | Use Case | Rate Limit |
 |--------|----------|------------|
-| OpenSky Network | Aircraft tracking | Generous (registered) |
+| Airplanes.Live | Aircraft tracking (primary) | Unlimited |
+| OpenSky Network | Aircraft tracking (fallback) | Generous (registered) |
 | ADS-B Exchange | Military unfiltered | $10/month |
+
+**Note:** Aircraft display with rotational icons based on heading. Military aircraft (red) are identified by callsign patterns (USAF, RCH, NATO, etc.).
 
 ### GPS Interference
 
@@ -166,18 +171,24 @@ The web dashboard (`server.py`) provides an interactive map at **http://localhos
 **Features:**
 - Dark-themed Leaflet map with multiple layers
 - GPS interference zones with intensity indicators
-- Military and civilian aircraft tracking
-- Strategic chokepoint overlays
-- Cyber threat markers by country
+- Aircraft tracking with rotation based on heading (military=red, civilian=blue)
+- Strategic chokepoint overlays with polygon boundaries
+- Cyber threat markers by country (IOCs from Feodo, ThreatFox, OTX)
 - AIS vessel integration (when Arsenal Tracker running on port 8080)
 - Auto-refresh every 60 seconds
+- Sample data displayed when no feed.json exists
 
 **Layer Controls:**
-- GPS Interference
-- Aviation
-- Chokepoints
-- AIS Vessels
-- Cyber Threats
+- GPS Interference - Jamming/spoofing zones
+- Aviation - Individual aircraft with directional icons
+- Chokepoints - Strategic maritime choke points
+- AIS Vessels - Ship tracking (requires AIS_Tracker)
+- Cyber Threats - IOC markers aggregated by country
+
+**Cyber Threat Display:**
+- C2 servers, botnets, and malware IOCs from abuse.ch feeds
+- Country-level aggregation with threat scoring
+- Popup details: Total IOCs, C2 count, botnet indicators, malware families
 
 ## Correlation Rules
 
