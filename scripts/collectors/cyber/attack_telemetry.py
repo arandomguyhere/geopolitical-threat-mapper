@@ -157,7 +157,7 @@ class TelemetryCollector(BaseCollector):
                     logger.error(f"DShield error: {resp.status}")
                     return []
 
-                data = await resp.json()
+                data = await resp.json(content_type=None)
 
                 for item in data:
                     event = AttackEvent(
@@ -189,7 +189,7 @@ class TelemetryCollector(BaseCollector):
                 if resp.status != 200:
                     return {}
 
-                data = await resp.json()
+                data = await resp.json(content_type=None)
                 return {int(item["port"]): int(item["count"]) for item in data}
 
         except Exception as e:

@@ -137,7 +137,7 @@ class CorrelationEngine:
     def _load_rules(self, path: str):
         """Load correlation rules from YAML"""
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             self.rules = config.get("rules", [])
@@ -152,7 +152,7 @@ class CorrelationEngine:
     def _load_chokepoints(self, path: str):
         """Load chokepoint definitions from GeoJSON"""
         try:
-            with open(path, "r") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 geojson = json.load(f)
 
             for feature in geojson.get("features", []):
