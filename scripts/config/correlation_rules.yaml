@@ -48,7 +48,7 @@ rules:
     actions:
       - type: alert
         severity: critical
-        message: "⚠️ CRITICAL: Potential infrastructure sabotage - {vessel_name} near {cable_name}"
+        message: "CRITICAL: Potential infrastructure sabotage - {vessel_name} near {cable_name}"
       - type: notify
         channels: ["webhook", "email"]
       - type: enrich
@@ -92,7 +92,7 @@ rules:
     actions:
       - type: alert
         severity: critical
-        message: "🚢 Sanctions evasion: STS transfer detected - {vessel_name}"
+        message: "ALERT: Sanctions evasion - STS transfer detected - {vessel_name}"
       - type: flag
         category: "sanctions_violation"
 
@@ -132,7 +132,7 @@ rules:
     actions:
       - type: alert
         severity: critical
-        message: "🚨 ATTACK: {chokepoint_name} - {event_description}"
+        message: "ATTACK: {chokepoint_name} - {event_description}"
       - type: update_risk_map
         region: "{chokepoint_id}"
         risk_delta: 30
@@ -177,7 +177,7 @@ rules:
     actions:
       - type: alert
         severity: high
-        message: "🔴 Pre-conflict indicators in {region}: cyber+news+aviation correlation"
+        message: "WARNING: Pre-conflict indicators in {region} - cyber+news+aviation correlation"
       - type: increase_monitoring
         region: "{region_id}"
         factor: 2
@@ -213,7 +213,7 @@ rules:
     actions:
       - type: alert
         severity: high
-        message: "📡 GPS interference campaign detected in {region}"
+        message: "GPS interference campaign detected in {region}"
       - type: map_overlay
         layer: "gps_interference"
 
@@ -247,7 +247,7 @@ rules:
     actions:
       - type: alert
         severity: high
-        message: "🚨 Chokepoint disruption: {chokepoint_name} - {event_summary}"
+        message: "ALERT: Chokepoint disruption - {chokepoint_name} - {event_summary}"
       - type: update_risk_map
         region: "{chokepoint_id}"
         risk_delta: 20
@@ -288,7 +288,7 @@ rules:
     actions:
       - type: alert
         severity: high
-        message: "🇹🇼 Taiwan Strait escalation: {aircraft_count} aircraft, {vessel_count} vessels"
+        message: "Taiwan Strait escalation: {aircraft_count} aircraft, {vessel_count} vessels"
       - type: situation_report
         template: "taiwan_sitrep"
 
@@ -327,7 +327,7 @@ rules:
           - "whois"
       - type: alert
         severity: medium
-        message: "🎯 APT infrastructure correlation: {apt_group}"
+        message: "APT infrastructure correlation: {apt_group}"
 
   # MEDIUM: Dark Vessel Behavioral Pattern
   - id: dark_vessel_pattern
@@ -358,7 +358,7 @@ rules:
         category: "shadow_fleet_candidate"
       - type: alert
         severity: medium
-        message: "🔍 Dark vessel pattern: {vessel_name} ({mmsi})"
+        message: "Dark vessel pattern: {vessel_name} ({mmsi})"
       - type: add_watchlist
         list: "shadow_fleet_monitoring"
 
@@ -387,7 +387,7 @@ rules:
     actions:
       - type: alert
         severity: medium
-        message: "⚡ Critical infrastructure exposure in {region}: {service_count} ICS/SCADA systems"
+        message: "Critical infrastructure exposure in {region}: {service_count} ICS/SCADA systems"
 
 # ============================================================================
 # SCORING CONFIGURATION
