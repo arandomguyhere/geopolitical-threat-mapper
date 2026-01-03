@@ -92,14 +92,22 @@ OPENSKY_PASSWORD=your_password
 ### Run
 
 ```bash
-# Full collection (all regions)
+# Step 1: Collect data from all sources
 python main.py
 
+# Step 2: Start the web dashboard
+python server.py
+
+# Step 3: Open http://localhost:8081 in your browser
+```
+
+**Options:**
+```bash
 # Specific regions only
 python main.py --regions baltic_sea taiwan_strait
 
-# With custom config
-python main.py --config path/to/config.yaml
+# Web dashboard on different port
+python server.py --port 9000
 ```
 
 ## Data Sources
@@ -151,6 +159,26 @@ After running, find these in the `output/` directory:
 - **cyber_heatmap.json** - Regional cyber threat scores
 - **daily_brief.md** - Human-readable situation report
 
+## Web Dashboard
+
+The web dashboard (`server.py`) provides an interactive map at **http://localhost:8081**:
+
+**Features:**
+- Dark-themed Leaflet map with multiple layers
+- GPS interference zones with intensity indicators
+- Military and civilian aircraft tracking
+- Strategic chokepoint overlays
+- Cyber threat markers by country
+- AIS vessel integration (when Arsenal Tracker running on port 8080)
+- Auto-refresh every 60 seconds
+
+**Layer Controls:**
+- GPS Interference
+- Aviation
+- Chokepoints
+- AIS Vessels
+- Cyber Threats
+
 ## Correlation Rules
 
 The system watches for these patterns:
@@ -169,22 +197,24 @@ See `config/correlation_rules.yaml` for full definitions.
 
 ```
 geopolitical-threat-mapper/
-├── main.py                    # Main orchestrator
+├── main.py                    # Data collection orchestrator
+├── server.py                  # Web dashboard (port 8081)
 ├── requirements.txt
-├── config/
-│   ├── sources.yaml           # Data source configuration
-│   └── correlation_rules.yaml # Correlation rule definitions
-├── collectors/
-│   ├── cyber/
-│   │   ├── shodan_collector.py
-│   │   └── otx_collector.py
-│   ├── aviation/
-│   │   └── opensky_collector.py
-│   ├── gps/
-│   └── events/
-├── processors/
-│   └── correlation_engine.py
-├── outputs/
+├── .env.example               # Environment template
+├── scripts/
+│   ├── config/
+│   │   ├── sources.yaml           # Data source configuration
+│   │   ├── correlation_rules.yaml # Correlation rule definitions
+│   │   └── chokepoints.geojson    # Strategic chokepoint polygons
+│   ├── collectors/
+│   │   ├── cyber/                 # Shodan, OTX, abuse.ch, NVD
+│   │   ├── maritime/              # AIS_Tracker integration
+│   │   ├── aviation/              # OpenSky/Airplanes.Live
+│   │   ├── gps/                   # GPSJAM interference
+│   │   └── news/                  # News scraper integration
+│   └── processors/
+│       └── correlation_engine.py  # Multi-source correlation
+├── tests/                     # 40 unit tests
 └── output/                    # Generated files
 ```
 
@@ -232,16 +262,17 @@ NEWS_SCRAPER_FEED = "/path/to/Google-News-Scraper/docs/feed.json"
 ## Roadmap
 
 - [x] Core correlation engine design
-- [x] Cyber collectors (Shodan, OTX, abuse.ch, DShield)
+- [x] Cyber collectors (Shodan, OTX, abuse.ch, DShield, NVD)
 - [x] Configuration system (sources.yaml, correlation_rules.yaml)
 - [x] Chokepoints definition (12 strategic locations)
-- [ ] AIS_Tracker API connector
-- [ ] News-Scraper feed ingester
-- [ ] OpenSky aviation collector
-- [ ] GPSJAM scraper
+- [x] AIS_Tracker API connector
+- [x] News-Scraper feed ingester (60+ APT groups)
+- [x] Aviation collector (Airplanes.Live + OpenSky fallback)
+- [x] GPSJAM interference collector
+- [x] Correlation engine implementation
+- [x] Interactive Leaflet map (web dashboard)
+- [x] Unit test suite (40 tests)
 - [ ] GDELT integration
-- [ ] Correlation engine implementation
-- [ ] Interactive Leaflet map
 - [ ] GitHub Actions automation
 - [ ] Alert notifications (Slack, Discord)
 
