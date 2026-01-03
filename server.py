@@ -738,13 +738,33 @@ def get_feed():
 
     if feed_path.exists():
         with open(feed_path, "r", encoding="utf-8") as f:
-            return jsonify(json.load(f))
+            data = json.load(f)
+            # Debug: log what cyber data we have
+            cyber = data.get("cyber", {})
+            iocs = cyber.get("iocs", [])
+            logger.info(f"Feed has {len(iocs)} IOCs")
+            if iocs:
+                # Log sample IOC for debugging
+                sample = iocs[0]
+                logger.info(f"Sample IOC: country={sample.get('country')}, type={sample.get('type')}")
+            return jsonify(data)
 
+    # Return sample data if no feed exists
     return jsonify({
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "aviation": {"aircraft": []},
         "gps": {"interference_zones": []},
-        "cyber": {"exposed_services": []},
+        "cyber": {
+            "exposed_services": [],
+            "iocs": [
+                # Sample IOCs for testing UI
+                {"value": "192.0.2.1", "type": "ip", "threat_type": "botnet", "country": "RU", "confidence": 90, "malware_family": "Emotet"},
+                {"value": "192.0.2.2", "type": "ip", "threat_type": "c2", "country": "CN", "confidence": 85, "malware_family": "Cobalt Strike"},
+                {"value": "192.0.2.3", "type": "ip", "threat_type": "botnet", "country": "US", "confidence": 80, "malware_family": "TrickBot"},
+                {"value": "192.0.2.4", "type": "ip", "threat_type": "malware", "country": "IR", "confidence": 75, "malware_family": "APT33"},
+                {"value": "192.0.2.5", "type": "ip", "threat_type": "c2", "country": "KP", "confidence": 95, "malware_family": "Lazarus"},
+            ]
+        },
         "maritime": {"vessels": []}
     })
 
