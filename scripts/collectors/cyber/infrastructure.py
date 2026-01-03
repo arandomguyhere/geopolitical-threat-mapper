@@ -151,8 +151,13 @@ class InfrastructureCollector(BaseCollector):
     async def init_session(self):
         """Initialize aiohttp session"""
         if self.session is None:
+            headers = {
+                "User-Agent": "GeopoliticalThreatMapper/1.0 (Security Research)",
+                "Accept": "application/json",
+            }
             self.session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=30)
+                timeout=aiohttp.ClientTimeout(total=30),
+                headers=headers
             )
 
     async def close(self):
