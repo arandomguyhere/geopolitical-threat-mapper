@@ -286,17 +286,17 @@ DASHBOARD_HTML = """
             <div class="legend-color" style="background: #2ecc71;"></div>
             <span>Low</span>
         </div>
-        <h4 style="margin-top: 10px;">Icons</h4>
+        <h4 style="margin-top: 10px;">Markers</h4>
         <div class="legend-item">
-            <span style="font-size: 1.2rem;">✈️</span>
-            <span>Military Aircraft</span>
+            <div class="legend-color" style="background: #3498db; border-radius: 50%;"></div>
+            <span>Aircraft</span>
         </div>
         <div class="legend-item">
-            <span style="font-size: 1.2rem;">📡</span>
+            <div class="legend-color" style="background: #9b59b6; border-radius: 50%;"></div>
             <span>GPS Interference</span>
         </div>
         <div class="legend-item">
-            <span style="font-size: 1.2rem;">⚓</span>
+            <div class="legend-color" style="background: #e94560;"></div>
             <span>Chokepoint</span>
         </div>
     </div>
@@ -335,31 +335,31 @@ DASHBOARD_HTML = """
             cyber: L.layerGroup().addTo(map)
         };
 
-        // Custom icons
+        // Custom icons using SVG
         const icons = {
             military: L.divIcon({
-                html: '<div style="font-size:24px;">✈️</div>',
-                className: 'aircraft-icon',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            }),
-            civilian: L.divIcon({
-                html: '<div style="font-size:20px;opacity:0.6;">✈️</div>',
+                html: '<svg width="24" height="24" viewBox="0 0 24 24" fill="#e94560"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>',
                 className: 'aircraft-icon',
                 iconSize: [24, 24],
                 iconAnchor: [12, 12]
             }),
+            civilian: L.divIcon({
+                html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="#3498db" opacity="0.7"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>',
+                className: 'aircraft-icon',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            }),
             gps: L.divIcon({
-                html: '<div style="font-size:24px;">📡</div>',
+                html: '<svg width="24" height="24" viewBox="0 0 24 24" fill="#9b59b6"><circle cx="12" cy="12" r="8" stroke="#9b59b6" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="#9b59b6"/><line x1="12" y1="2" x2="12" y2="6" stroke="#9b59b6" stroke-width="2"/><line x1="12" y1="18" x2="12" y2="22" stroke="#9b59b6" stroke-width="2"/><line x1="2" y1="12" x2="6" y2="12" stroke="#9b59b6" stroke-width="2"/><line x1="18" y1="12" x2="22" y2="12" stroke="#9b59b6" stroke-width="2"/></svg>',
                 className: 'gps-icon pulse',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
             }),
             chokepoint: L.divIcon({
-                html: '<div style="font-size:28px;">⚓</div>',
+                html: '<svg width="28" height="28" viewBox="0 0 24 24" fill="#e94560"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>',
                 className: 'chokepoint-icon',
-                iconSize: [35, 35],
-                iconAnchor: [17, 17]
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
             })
         };
 
