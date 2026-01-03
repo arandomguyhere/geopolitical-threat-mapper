@@ -22,6 +22,12 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
+# Load environment variables BEFORE importing collectors (they use config singleton)
+load_dotenv()
+
+from scripts.config import reset_config
+reset_config()  # Force config reload with new env vars
+
 from scripts.collectors import (
     InfrastructureCollector,
     IOCCollector,
@@ -399,9 +405,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    # Load environment variables
-    load_dotenv()
 
     # Set log level
     if args.verbose:

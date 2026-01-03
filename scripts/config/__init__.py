@@ -13,6 +13,7 @@ from .settings import (
     ServerConfig,
     load_config,
     get_config,
+    reset_config,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "ServerConfig",
     "load_config",
     "get_config",
+    "reset_config",
 ]

@@ -363,6 +363,12 @@ def get_config() -> Config:
     return _config
 
 
+def reset_config():
+    """Reset config singleton (forces reload on next get_config call)"""
+    global _config
+    _config = None
+
+
 if __name__ == "__main__":
     # Test configuration loading
     config = load_config()
