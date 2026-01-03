@@ -94,10 +94,10 @@ class ThreatMapper:
         shodan_key = self._get_env("SHODAN_API_KEY")
         if shodan_key:
             try:
-                async with InfrastructureCollector(shodan_api_key=shodan_key) as collector:
-                    data = await collector.collect_all()
-                    results["exposed_services"] = data.get("exposed_services", [])
-                    logger.info(f"Collected {len(results['exposed_services'])} exposed services")
+                async with InfrastructureCollector() as collector:
+                    data = await collector.collect_all_priority_countries()
+                    results["exposed_services"] = list(data.values()) if data else []
+                    logger.info(f"Collected exposure data for {len(results['exposed_services'])} countries")
             except Exception as e:
                 logger.error(f"Infrastructure collection error: {e}")
 
@@ -105,8 +105,8 @@ class ThreatMapper:
         otx_key = self._get_env("OTX_API_KEY")
         try:
             async with IOCCollector() as collector:
-                data = await collector.collect_all()
-                results["iocs"] = data.get("iocs", [])
+                iocs = await collector.collect_all()
+                results["iocs"] = [ioc.to_dict() if hasattr(ioc, 'to_dict') else ioc for ioc in iocs]
                 logger.info(f"Collected {len(results['iocs'])} IOCs")
         except Exception as e:
             logger.error(f"IOC collection error: {e}")
@@ -115,7 +115,7 @@ class ThreatMapper:
         try:
             async with TelemetryCollector() as collector:
                 data = await collector.collect_all()
-                results["attack_data"] = data.get("attack_data", [])
+                results["attack_data"] = data.get("events", [])
                 logger.info(f"Collected {len(results['attack_data'])} attack records")
         except Exception as e:
             logger.error(f"Telemetry collection error: {e}")
@@ -124,7 +124,8 @@ class ThreatMapper:
         try:
             async with VulnerabilityCollector() as collector:
                 data = await collector.collect_all()
-                results["vulnerabilities"] = data.get("vulnerabilities", [])
+                all_vulns = data.get("kev", []) + data.get("recent", []) + data.get("strategic", [])
+                results["vulnerabilities"] = all_vulns
                 logger.info(f"Collected {len(results['vulnerabilities'])} vulnerabilities")
         except Exception as e:
             logger.error(f"Vulnerability collection error: {e}")
@@ -289,21 +290,21 @@ class ThreatMapper:
         # 1. Threat feed (JSON)
         feed = self.engine.export_feed()
         feed_path = self.output_dir / "feed.json"
-        with open(feed_path, "w") as f:
-            json.dump(feed, f, indent=2, default=str)
+        with open(feed_path, "w", encoding="utf-8") as f:
+            json.dump(feed, f, indent=2, default=str, ensure_ascii=False)
         logger.info(f"Wrote threat feed to {feed_path}")
 
         # 2. Cyber heatmap (JSON)
         heatmap = self.engine.get_threat_heatmap()
         heatmap_path = self.output_dir / "cyber_heatmap.json"
-        with open(heatmap_path, "w") as f:
-            json.dump(heatmap, f, indent=2, default=str)
+        with open(heatmap_path, "w", encoding="utf-8") as f:
+            json.dump(heatmap, f, indent=2, default=str, ensure_ascii=False)
         logger.info(f"Wrote heatmap to {heatmap_path}")
 
         # 3. Daily brief (Markdown)
         brief = self.engine.generate_daily_brief()
         brief_path = self.output_dir / "daily_brief.md"
-        with open(brief_path, "w") as f:
+        with open(brief_path, "w", encoding="utf-8") as f:
             f.write(brief)
         logger.info(f"Wrote daily brief to {brief_path}")
 
@@ -311,8 +312,8 @@ class ThreatMapper:
         archive_dir = self.output_dir / "archive"
         archive_dir.mkdir(exist_ok=True)
         archive_path = archive_dir / f"feed_{timestamp}.json"
-        with open(archive_path, "w") as f:
-            json.dump(feed, f, indent=2, default=str)
+        with open(archive_path, "w", encoding="utf-8") as f:
+            json.dump(feed, f, indent=2, default=str, ensure_ascii=False)
 
         return {
             "feed": str(feed_path),
