@@ -90,6 +90,123 @@ DASHBOARD_HTML = """
 
         #map { height: calc(100vh - 60px); width: 100%; }
 
+        /* Vessel search */
+        .vessel-search {
+            display: flex;
+            gap: 8px;
+            margin-left: 20px;
+        }
+        .vessel-search input {
+            padding: 6px 12px;
+            background: #16213e;
+            border: 1px solid #0f3460;
+            color: #eee;
+            border-radius: 4px;
+            width: 180px;
+            font-size: 0.85rem;
+        }
+        .vessel-search input::placeholder { color: #666; }
+        .vessel-search button {
+            padding: 6px 12px;
+            background: #0f3460;
+            border: 1px solid #0f3460;
+            color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Vessel details panel */
+        #vessel-panel {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(26, 26, 46, 0.98);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            width: 320px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            display: none;
+        }
+        #vessel-panel.active { display: block; }
+        #vessel-panel h3 { color: #e94560; margin-bottom: 10px; font-size: 1rem; }
+        #vessel-panel .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .vessel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .vessel-flag { font-size: 1.5rem; }
+        .vessel-name { font-weight: bold; font-size: 1.1rem; }
+        .vessel-type { color: #888; font-size: 0.8rem; }
+        .risk-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .risk-critical { background: #e94560; color: white; }
+        .risk-high { background: #f39c12; color: white; }
+        .risk-medium { background: #3498db; color: white; }
+        .risk-low { background: #2ecc71; color: white; }
+        .vessel-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .vessel-info-item {
+            background: #16213e;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .vessel-info-item label { color: #888; font-size: 0.7rem; display: block; }
+        .vessel-info-item span { font-size: 0.9rem; }
+        .risk-factors { margin-top: 10px; }
+        .risk-factors h4 { color: #f39c12; font-size: 0.85rem; margin-bottom: 8px; }
+        .risk-factor {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+        .risk-factor.active { color: #e94560; }
+        .risk-factor.inactive { color: #555; }
+
+        /* Vessel icon styles */
+        .vessel-icon {
+            transition: transform 0.3s ease;
+        }
+        .vessel-icon:hover {
+            transform: scale(1.3);
+        }
+
+        /* Dark fleet alert banner */
+        .dark-fleet-alert {
+            background: linear-gradient(90deg, #e94560 0%, #0f3460 100%);
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .dark-fleet-alert.active { display: block; }
+
         .layer-control {
             position: absolute;
             top: 80px;
@@ -227,12 +344,12 @@ DASHBOARD_HTML = """
         <h1>Geopolitical Threat Mapper</h1>
         <div class="stats">
             <div class="stat">
-                <div class="stat-value critical" id="critical-count">0</div>
-                <div class="stat-label">Critical</div>
+                <div class="stat-value critical" id="vessel-count">0</div>
+                <div class="stat-label">Vessels</div>
             </div>
             <div class="stat">
-                <div class="stat-value high" id="high-count">0</div>
-                <div class="stat-label">High</div>
+                <div class="stat-value high" id="dark-count">0</div>
+                <div class="stat-label">Dark Ships</div>
             </div>
             <div class="stat">
                 <div class="stat-value medium" id="aircraft-count">0</div>
@@ -242,8 +359,17 @@ DASHBOARD_HTML = """
                 <div class="stat-value low" id="gps-zones">0</div>
                 <div class="stat-label">GPS Zones</div>
             </div>
-            <button id="settings-btn" style="background:#0f3460;border:1px solid #e94560;color:#eee;padding:8px 16px;border-radius:4px;cursor:pointer;margin-left:20px;">Settings</button>
+            <div class="vessel-search">
+                <input type="text" id="vessel-search-input" placeholder="Search MMSI/Name...">
+                <button id="vessel-search-btn">Search</button>
+            </div>
+            <button id="settings-btn" style="background:#0f3460;border:1px solid #e94560;color:#eee;padding:8px 16px;border-radius:4px;cursor:pointer;margin-left:10px;">Settings</button>
         </div>
+    </div>
+
+    <!-- Dark Fleet Alert Banner -->
+    <div id="dark-fleet-alert" class="dark-fleet-alert">
+        <strong>DARK FLEET ALERT:</strong> <span id="dark-fleet-message"></span>
     </div>
 
     <!-- Settings Modal -->
@@ -325,6 +451,14 @@ DASHBOARD_HTML = """
         </div>
     </div>
 
+    <!-- Vessel Details Panel -->
+    <div id="vessel-panel">
+        <button class="close-btn" id="close-vessel-panel">&times;</button>
+        <div id="vessel-panel-content">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+
     <div id="map"></div>
 
     <div class="layer-control">
@@ -376,6 +510,23 @@ DASHBOARD_HTML = """
         <div class="legend-item">
             <div class="legend-color" style="background: #e94560;"></div>
             <span>Chokepoint</span>
+        </div>
+        <h4 style="margin-top: 10px;">Vessels</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e94560;"></div>
+            <span>Dark Ship / Critical</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #9b59b6;"></div>
+            <span>Sanctioned</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f39c12;"></div>
+            <span>High Risk</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #2ecc71;"></div>
+            <span>Normal</span>
         </div>
     </div>
 
@@ -734,47 +885,216 @@ DASHBOARD_HTML = """
             }
         }
 
+        // Global vessel data storage for search/details
+        let allVessels = [];
+
+        // Flag emoji mapping
+        const flagEmojis = {
+            'RU': '🇷🇺', 'CN': '🇨🇳', 'US': '🇺🇸', 'PA': '🇵🇦', 'LR': '🇱🇷', 'MH': '🇲🇭',
+            'HK': '🇭🇰', 'SG': '🇸🇬', 'MT': '🇲🇹', 'BS': '🇧🇸', 'CY': '🇨🇾', 'GB': '🇬🇧',
+            'GR': '🇬🇷', 'NO': '🇳🇴', 'JP': '🇯🇵', 'KR': '🇰🇷', 'DE': '🇩🇪', 'IT': '🇮🇹',
+            'FR': '🇫🇷', 'NL': '🇳🇱', 'DK': '🇩🇰', 'TR': '🇹🇷', 'IN': '🇮🇳', 'AE': '🇦🇪',
+            'SA': '🇸🇦', 'IR': '🇮🇷', 'VE': '🇻🇪', 'KP': '🇰🇵', 'UA': '🇺🇦', 'TW': '🇹🇼'
+        };
+
+        // Create ship icon with rotation and risk coloring
+        function createVesselIcon(vessel) {
+            const riskLevel = vessel.risk_level || 'unknown';
+            const isDark = vessel.is_dark;
+            const isSanctioned = vessel.sanctions_match;
+
+            // Color based on risk
+            let color = '#2ecc71'; // low/unknown
+            if (isSanctioned) color = '#9b59b6'; // purple for sanctioned
+            else if (isDark || riskLevel === 'critical') color = '#e94560';
+            else if (riskLevel === 'high') color = '#f39c12';
+            else if (riskLevel === 'medium') color = '#3498db';
+
+            const heading = vessel.heading || vessel.course || 0;
+            const size = isDark || isSanctioned ? 28 : 22;
+
+            // Ship SVG icon
+            const shipSvg = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${heading}deg);" fill="${color}">
+                <path d="M12 2L4 12l1.5 1.5L12 8l6.5 5.5L20 12 12 2zM12 8v14l-4-3v-7l4-4zm0 0l4 4v7l-4 3V8z"/>
+            </svg>`;
+
+            return L.divIcon({
+                html: shipSvg,
+                className: 'vessel-icon',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+        }
+
+        // Show vessel details in side panel
+        function showVesselDetails(vessel) {
+            const panel = document.getElementById('vessel-panel');
+            const content = document.getElementById('vessel-panel-content');
+
+            const flagEmoji = flagEmojis[vessel.flag] || '🚢';
+            const riskLevel = vessel.risk_level || 'unknown';
+            const riskClass = 'risk-' + riskLevel;
+
+            content.innerHTML = `
+                <div class="vessel-header">
+                    <span class="vessel-flag">${flagEmoji}</span>
+                    <div>
+                        <div class="vessel-name">${vessel.name || 'Unknown Vessel'}</div>
+                        <div class="vessel-type">${vessel.vessel_type || 'Unknown Type'}</div>
+                    </div>
+                    <span class="risk-badge ${riskClass}">${riskLevel}</span>
+                </div>
+
+                <div class="vessel-info-grid">
+                    <div class="vessel-info-item">
+                        <label>MMSI</label>
+                        <span>${vessel.mmsi}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>IMO</label>
+                        <span>${vessel.imo || 'N/A'}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Flag</label>
+                        <span>${vessel.flag || 'Unknown'}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Speed</label>
+                        <span>${vessel.speed ? vessel.speed.toFixed(1) + ' kts' : 'N/A'}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Course</label>
+                        <span>${vessel.course ? vessel.course.toFixed(0) + '°' : 'N/A'}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Heading</label>
+                        <span>${vessel.heading ? vessel.heading.toFixed(0) + '°' : 'N/A'}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Position</label>
+                        <span>${vessel.lat?.toFixed(4)}, ${vessel.lon?.toFixed(4)}</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Destination</label>
+                        <span>${vessel.destination || 'N/A'}</span>
+                    </div>
+                </div>
+
+                <div class="risk-factors">
+                    <h4>Risk Indicators</h4>
+                    <div class="risk-factor ${vessel.is_dark ? 'active' : 'inactive'}">
+                        ${vessel.is_dark ? '⚠️' : '✓'} Dark Ship (AIS Gap)
+                        ${vessel.ais_gap_hours ? '(' + vessel.ais_gap_hours.toFixed(1) + 'h)' : ''}
+                    </div>
+                    <div class="risk-factor ${vessel.sanctions_match ? 'active' : 'inactive'}">
+                        ${vessel.sanctions_match ? '🚨' : '✓'} Sanctions Match
+                    </div>
+                    <div class="risk-factor ${vessel.is_flag_of_convenience ? 'active' : 'inactive'}">
+                        ${vessel.is_flag_of_convenience ? '⚠️' : '✓'} Flag of Convenience
+                    </div>
+                    <div class="risk-factor ${vessel.is_shadow_fleet ? 'active' : 'inactive'}">
+                        ${vessel.is_shadow_fleet ? '⚠️' : '✓'} Shadow Fleet Flag
+                    </div>
+                    <div class="risk-factor ${vessel.in_sts_transfer ? 'active' : 'inactive'}">
+                        ${vessel.in_sts_transfer ? '⚠️' : '✓'} STS Transfer
+                    </div>
+                    <div class="risk-factor ${vessel.near_cable ? 'active' : 'inactive'}">
+                        ${vessel.near_cable ? '⚠️' : '✓'} Near Subsea Cable
+                        ${vessel.cable_name ? '(' + vessel.cable_name + ')' : ''}
+                    </div>
+                </div>
+
+                <div style="margin-top:15px;">
+                    <div class="vessel-info-item" style="margin-bottom:8px;">
+                        <label>Dark Fleet Score</label>
+                        <span style="font-size:1.2rem;font-weight:bold;color:${
+                            vessel.dark_fleet_score >= 70 ? '#e94560' :
+                            vessel.dark_fleet_score >= 50 ? '#f39c12' :
+                            vessel.dark_fleet_score >= 30 ? '#3498db' : '#2ecc71'
+                        }">${vessel.dark_fleet_score?.toFixed(0) || 0}/100</span>
+                    </div>
+                    <div class="vessel-info-item">
+                        <label>Region</label>
+                        <span>${vessel.region || vessel.chokepoint || 'Open Ocean'}</span>
+                    </div>
+                </div>
+            `;
+
+            panel.classList.add('active');
+
+            // Center map on vessel
+            map.setView([vessel.lat, vessel.lon], 8);
+        }
+
         async function loadAISData() {
             try {
                 const resp = await fetch('/api/ais');
                 const data = await resp.json();
 
-                if (data.vessels && data.vessels.length > 0) {
-                    layers.vessels.clearLayers();
+                const vessels = data.vessels || [];
+                allVessels = vessels; // Store for search
 
-                    data.vessels.forEach(vessel => {
-                        if (vessel.lat && vessel.lon) {
-                            const isDark = vessel.is_dark;
-                            const color = isDark ? threatColors.critical : threatColors.low;
+                layers.vessels.clearLayers();
 
-                            L.circleMarker([vessel.lat, vessel.lon], {
-                                radius: 6,
-                                color: color,
-                                fillColor: color,
-                                fillOpacity: 0.8
-                            }).addTo(layers.vessels).bindPopup(`
-                                <div class="popup-title">${vessel.name || vessel.mmsi}</div>
-                                <div class="popup-row"><strong>MMSI:</strong> ${vessel.mmsi}</div>
-                                <div class="popup-row"><strong>Flag:</strong> ${vessel.flag || 'Unknown'}</div>
-                                <div class="popup-row"><strong>Type:</strong> ${vessel.vessel_type || 'Unknown'}</div>
-                                <div class="popup-row"><strong>Dark Ship:</strong> ${isDark ? 'Yes' : 'No'}</div>
-                                <a href="http://localhost:8080" target="_blank" class="ais-link">View in AIS Tracker</a>
-                            `);
+                let darkCount = 0;
+                let sanctionedCount = 0;
+                const darkShips = [];
+
+                vessels.forEach(vessel => {
+                    if (vessel.lat && vessel.lon) {
+                        if (vessel.is_dark) darkCount++;
+                        if (vessel.sanctions_match) sanctionedCount++;
+                        if (vessel.is_dark || vessel.sanctions_match) {
+                            darkShips.push(vessel);
                         }
-                    });
 
-                    // Enable AIS layer checkbox
+                        const icon = createVesselIcon(vessel);
+                        const marker = L.marker([vessel.lat, vessel.lon], { icon: icon })
+                            .on('click', () => showVesselDetails(vessel));
+
+                        // Quick popup on hover
+                        const riskLevel = vessel.risk_level || 'unknown';
+                        marker.bindTooltip(`
+                            <strong>${vessel.name || vessel.mmsi}</strong><br>
+                            ${vessel.flag || 'Unknown'} | ${vessel.vessel_type || 'Unknown'}<br>
+                            Risk: ${riskLevel.toUpperCase()}
+                        `, { direction: 'top', offset: [0, -10] });
+
+                        layers.vessels.addLayer(marker);
+                    }
+                });
+
+                // Update stats
+                document.getElementById('vessel-count').textContent = vessels.length;
+                document.getElementById('dark-count').textContent = darkCount;
+
+                // Show dark fleet alert if any critical vessels
+                const alertBanner = document.getElementById('dark-fleet-alert');
+                const alertMessage = document.getElementById('dark-fleet-message');
+                if (darkShips.length > 0) {
+                    const alertText = darkShips.slice(0, 3).map(v =>
+                        `${v.name || v.mmsi} (${v.flag || '??'})`
+                    ).join(', ');
+                    alertMessage.textContent = `${darkShips.length} vessel(s) flagged: ${alertText}${darkShips.length > 3 ? '...' : ''}`;
+                    alertBanner.classList.add('active');
+                } else {
+                    alertBanner.classList.remove('active');
+                }
+
+                // Enable layer if vessels found
+                if (vessels.length > 0) {
                     document.getElementById('layer-vessels').checked = true;
                     layers.vessels.addTo(map);
                 }
+
+                console.log(`Loaded ${vessels.length} vessels, ${darkCount} dark ships, ${sanctionedCount} sanctioned`);
             } catch (error) {
                 console.log('AIS Tracker not available');
             }
         }
 
         function updateStats() {
-            document.getElementById('critical-count').textContent = stats.critical;
-            document.getElementById('high-count').textContent = stats.high;
+            // Vessel and dark count updated in loadAISData
             document.getElementById('aircraft-count').textContent = stats.aircraft;
             document.getElementById('gps-zones').textContent = stats.gpsZones;
         }
@@ -798,6 +1118,52 @@ DASHBOARD_HTML = """
 
         document.getElementById('layer-cyber').addEventListener('change', function() {
             this.checked ? map.addLayer(layers.cyber) : map.removeLayer(layers.cyber);
+        });
+
+        // Vessel search functionality
+        function searchVessel(query) {
+            if (!query) return;
+            query = query.toLowerCase().trim();
+
+            const found = allVessels.find(v =>
+                (v.mmsi && v.mmsi.toString().includes(query)) ||
+                (v.name && v.name.toLowerCase().includes(query)) ||
+                (v.imo && v.imo.toString().includes(query))
+            );
+
+            if (found) {
+                showVesselDetails(found);
+                // Flash the vessel marker
+                layers.vessels.eachLayer(layer => {
+                    if (layer.getLatLng) {
+                        const ll = layer.getLatLng();
+                        if (Math.abs(ll.lat - found.lat) < 0.001 && Math.abs(ll.lng - found.lon) < 0.001) {
+                            layer.openPopup();
+                        }
+                    }
+                });
+            } else {
+                alert('Vessel not found: ' + query);
+            }
+        }
+
+        // Vessel search button handler
+        document.getElementById('vessel-search-btn').addEventListener('click', () => {
+            const query = document.getElementById('vessel-search-input').value;
+            searchVessel(query);
+        });
+
+        // Vessel search on Enter key
+        document.getElementById('vessel-search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = document.getElementById('vessel-search-input').value;
+                searchVessel(query);
+            }
+        });
+
+        // Close vessel panel handler
+        document.getElementById('close-vessel-panel').addEventListener('click', () => {
+            document.getElementById('vessel-panel').classList.remove('active');
         });
 
         // Initial load
