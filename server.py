@@ -397,8 +397,16 @@ DASHBOARD_HTML = """
                         <input type="text" name="CRIMINAL_IP_API_KEY" placeholder="Enter Criminal IP key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
                     </div>
                     <div style="margin-bottom:10px;">
-                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">LeakIX Key <a href="https://leakix.net/auth/register" target="_blank" style="color:#e94560;">(Get Key)</a></label>
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">LeakIX Key <a href="https://leakix.net/auth/register" target="_blank" style="color:#e94560;">(Get Key - Free)</a></label>
                         <input type="text" name="LEAKIX_API_KEY" placeholder="Enter LeakIX key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">ZoomEye Key <a href="https://www.zoomeye.org/login" target="_blank" style="color:#e94560;">(Get Key - Free tier)</a></label>
+                        <input type="text" name="ZOOMEYE_API_KEY" placeholder="Enter ZoomEye API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">Netlas Key <a href="https://app.netlas.io/registration/" target="_blank" style="color:#e94560;">(Get Key - 50/day free)</a></label>
+                        <input type="text" name="NETLAS_API_KEY" placeholder="Enter Netlas API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
                     </div>
                     <div style="margin-bottom:10px;">
                         <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">GreyNoise Key <a href="https://viz.greynoise.io/signup" target="_blank" style="color:#e94560;">(Get Key)</a></label>
