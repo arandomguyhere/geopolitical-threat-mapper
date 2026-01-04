@@ -412,7 +412,7 @@ DASHBOARD_HTML = """
         function processGPSData(gpsData) {
             layers.gps.clearLayers();
 
-            const zones = gpsData.interference_zones || [];
+            const zones = gpsData.interference_zones || gpsData.zones || [];
             stats.gpsZones = zones.length;
 
             zones.forEach(zone => {
