@@ -139,7 +139,8 @@ class ThreatMapper:
             async with VulnerabilityCollector() as collector:
                 data = await collector.collect_all()
                 all_vulns = data.get("kev", []) + data.get("recent", []) + data.get("strategic", [])
-                results["vulnerabilities"] = all_vulns
+                # Convert Vulnerability objects to dicts for correlation engine
+                results["vulnerabilities"] = [v.to_dict() if hasattr(v, 'to_dict') else v for v in all_vulns]
                 logger.info(f"Collected {len(results['vulnerabilities'])} vulnerabilities")
         except Exception as e:
             logger.error(f"Vulnerability collection error: {e}")

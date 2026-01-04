@@ -145,10 +145,11 @@ class IOCCollector(BaseCollector):
         """Initialize aiohttp session"""
         if self.session is None:
             # Use standard browser User-Agent - some APIs block custom agents
+            # NOTE: Don't set Content-Type in session headers - let aiohttp set it
+            # based on the request type (json= vs data=)
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json",
-                "Content-Type": "application/json",
             }
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=60),
