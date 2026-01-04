@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import aiohttp
-from flask import Flask, jsonify, render_template_string, send_from_directory
+from flask import Flask, jsonify, render_template_string, send_from_directory, request
 
 # Configure logging
 logging.basicConfig(
@@ -242,6 +242,74 @@ DASHBOARD_HTML = """
                 <div class="stat-value low" id="gps-zones">0</div>
                 <div class="stat-label">GPS Zones</div>
             </div>
+            <button id="settings-btn" style="background:#0f3460;border:1px solid #e94560;color:#eee;padding:8px 16px;border-radius:4px;cursor:pointer;margin-left:20px;">Settings</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;overflow-y:auto;">
+        <div style="background:#1a1a2e;max-width:600px;margin:50px auto;padding:25px;border-radius:8px;border:1px solid #0f3460;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h2 style="color:#e94560;margin:0;">API Key Configuration</h2>
+                <button id="close-settings" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">&times;</button>
+            </div>
+            <p style="color:#888;margin-bottom:20px;font-size:0.9rem;">Configure your API keys for data collection. Keys are stored in .env file.</p>
+
+            <form id="api-keys-form">
+                <div style="margin-bottom:20px;">
+                    <h3 style="color:#3498db;font-size:0.95rem;margin-bottom:10px;">Cyber Intelligence</h3>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">Shodan API Key <a href="https://account.shodan.io/register" target="_blank" style="color:#e94560;">(Get Key)</a></label>
+                        <input type="text" name="SHODAN_API_KEY" placeholder="Enter Shodan API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">AlienVault OTX Key <a href="https://otx.alienvault.com/accounts/signup/" target="_blank" style="color:#e94560;">(Get Key - Unlimited)</a></label>
+                        <input type="text" name="OTX_API_KEY" placeholder="Enter OTX API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">Criminal IP Key <a href="https://www.criminalip.io/register" target="_blank" style="color:#e94560;">(Get Key)</a></label>
+                        <input type="text" name="CRIMINAL_IP_API_KEY" placeholder="Enter Criminal IP key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">LeakIX Key <a href="https://leakix.net/auth/register" target="_blank" style="color:#e94560;">(Get Key)</a></label>
+                        <input type="text" name="LEAKIX_API_KEY" placeholder="Enter LeakIX key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">GreyNoise Key <a href="https://viz.greynoise.io/signup" target="_blank" style="color:#e94560;">(Get Key)</a></label>
+                        <input type="text" name="GREYNOISE_API_KEY" placeholder="Enter GreyNoise key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <h3 style="color:#3498db;font-size:0.95rem;margin-bottom:10px;">Aviation</h3>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">OpenSky Username <a href="https://opensky-network.org/index.php?option=com_users&view=registration" target="_blank" style="color:#e94560;">(Register)</a></label>
+                        <input type="text" name="OPENSKY_USERNAME" placeholder="OpenSky username" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">OpenSky Password</label>
+                        <input type="password" name="OPENSKY_PASSWORD" placeholder="OpenSky password" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <h3 style="color:#3498db;font-size:0.95rem;margin-bottom:10px;">Integration</h3>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">AIS Tracker URL</label>
+                        <input type="text" name="AIS_TRACKER_API_URL" placeholder="http://localhost:8080" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">News Scraper Feed Path</label>
+                        <input type="text" name="NEWS_SCRAPER_FEED_PATH" placeholder="../Google-News-Scraper/docs/feed.json" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" id="cancel-settings" style="padding:10px 20px;background:#0f3460;border:1px solid #0f3460;color:#888;border-radius:4px;cursor:pointer;">Cancel</button>
+                    <button type="submit" style="padding:10px 20px;background:#e94560;border:none;color:white;border-radius:4px;cursor:pointer;">Save Configuration</button>
+                </div>
+            </form>
+            <div id="settings-status" style="margin-top:15px;padding:10px;border-radius:4px;display:none;"></div>
         </div>
     </div>
 
@@ -725,6 +793,92 @@ DASHBOARD_HTML = """
 
         // Refresh every 60 seconds
         setInterval(loadData, 60000);
+
+        // Settings modal handlers
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettings = document.getElementById('close-settings');
+        const cancelSettings = document.getElementById('cancel-settings');
+        const apiKeysForm = document.getElementById('api-keys-form');
+        const settingsStatus = document.getElementById('settings-status');
+
+        // Open settings modal and load current values
+        settingsBtn.addEventListener('click', async () => {
+            settingsModal.style.display = 'block';
+            try {
+                const resp = await fetch('/api/settings');
+                const data = await resp.json();
+                // Populate form fields with current values (masked)
+                Object.entries(data).forEach(([key, value]) => {
+                    const input = apiKeysForm.querySelector(`[name="${key}"]`);
+                    if (input) {
+                        input.value = value || '';
+                        input.placeholder = value ? '••••••••' : input.placeholder;
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+            }
+        });
+
+        // Close modal handlers
+        closeSettings.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        cancelSettings.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        // Click outside modal to close
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+        });
+
+        // Save settings
+        apiKeysForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            settingsStatus.style.display = 'block';
+            settingsStatus.style.background = '#0f3460';
+            settingsStatus.style.color = '#888';
+            settingsStatus.textContent = 'Saving...';
+
+            const formData = new FormData(apiKeysForm);
+            const settings = {};
+            for (const [key, value] of formData.entries()) {
+                // Only include non-empty values (don't overwrite with empty)
+                if (value.trim()) {
+                    settings[key] = value.trim();
+                }
+            }
+
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (resp.ok) {
+                    settingsStatus.style.background = '#2ecc71';
+                    settingsStatus.style.color = '#fff';
+                    settingsStatus.textContent = 'Settings saved! Restart collector (main.py) to apply changes.';
+                    setTimeout(() => {
+                        settingsModal.style.display = 'none';
+                        settingsStatus.style.display = 'none';
+                    }, 2500);
+                } else {
+                    const err = await resp.json();
+                    throw new Error(err.error || 'Failed to save');
+                }
+            } catch (err) {
+                settingsStatus.style.background = '#e94560';
+                settingsStatus.style.color = '#fff';
+                settingsStatus.textContent = 'Error: ' + err.message;
+            }
+        });
     </script>
 </body>
 </html>
@@ -832,6 +986,106 @@ def get_brief():
             return jsonify({"content": f.read()})
 
     return jsonify({"content": "No brief available. Run main.py first."})
+
+
+# Settings keys that can be configured
+SETTINGS_KEYS = [
+    "SHODAN_API_KEY",
+    "OTX_API_KEY",
+    "CRIMINAL_IP_API_KEY",
+    "LEAKIX_API_KEY",
+    "GREYNOISE_API_KEY",
+    "OPENSKY_USERNAME",
+    "OPENSKY_PASSWORD",
+    "AIS_TRACKER_API_URL",
+    "NEWS_SCRAPER_FEED_PATH",
+]
+
+ENV_FILE = Path(__file__).parent / ".env"
+
+
+def mask_value(value: str, show_chars: int = 4) -> str:
+    """Mask sensitive values, showing only last few characters"""
+    if not value or len(value) <= show_chars:
+        return value
+    return "•" * (len(value) - show_chars) + value[-show_chars:]
+
+
+@app.route("/api/settings", methods=["GET"])
+def get_settings():
+    """Get current settings (masked for security)"""
+    settings = {}
+
+    # Read current .env file if exists
+    env_values = {}
+    if ENV_FILE.exists():
+        with open(ENV_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    env_values[key.strip()] = value.strip().strip('"').strip("'")
+
+    # Return masked values for configured keys
+    for key in SETTINGS_KEYS:
+        value = env_values.get(key, "")
+        if key in ("OPENSKY_PASSWORD",):
+            # Fully mask passwords
+            settings[key] = "••••••••" if value else ""
+        elif key in ("AIS_TRACKER_API_URL", "NEWS_SCRAPER_FEED_PATH"):
+            # Don't mask URLs/paths
+            settings[key] = value
+        else:
+            # Partially mask API keys
+            settings[key] = mask_value(value) if value else ""
+
+    return jsonify(settings)
+
+
+@app.route("/api/settings", methods=["POST"])
+def save_settings():
+    """Save settings to .env file"""
+    try:
+        new_settings = request.get_json() or {}
+
+        # Read existing .env content
+        existing = {}
+        other_lines = []  # Lines that aren't key=value (comments, blanks)
+
+        if ENV_FILE.exists():
+            with open(ENV_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped and not stripped.startswith("#") and "=" in stripped:
+                        key, _, value = stripped.partition("=")
+                        existing[key.strip()] = value.strip().strip('"').strip("'")
+                    else:
+                        other_lines.append(line.rstrip())
+
+        # Update with new values (only for allowed keys)
+        for key, value in new_settings.items():
+            if key in SETTINGS_KEYS and value:
+                existing[key] = value
+
+        # Write back to .env
+        with open(ENV_FILE, "w", encoding="utf-8") as f:
+            # Write comments/blanks first
+            for line in other_lines:
+                f.write(line + "\n")
+
+            # Write key=value pairs
+            for key, value in existing.items():
+                # Quote values with spaces
+                if " " in value and not value.startswith('"'):
+                    value = f'"{value}"'
+                f.write(f"{key}={value}\n")
+
+        logger.info(f"Settings updated: {list(new_settings.keys())}")
+        return jsonify({"status": "ok", "updated": list(new_settings.keys())})
+
+    except Exception as e:
+        logger.error(f"Failed to save settings: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 def main():
