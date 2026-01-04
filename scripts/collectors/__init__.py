@@ -6,7 +6,7 @@ from .cyber import (
     TelemetryCollector,
     VulnerabilityCollector,
 )
-from .maritime import AISTrackerCollector
+from .maritime import AISTrackerCollector, DirectAISCollector
 from .news import NewsScraperCollector
 from .aviation import OpenSkyCollector
 from .gps import GPSJamCollector
@@ -19,6 +19,7 @@ __all__ = [
     "VulnerabilityCollector",
     # Maritime
     "AISTrackerCollector",
+    "DirectAISCollector",
     # News
     "NewsScraperCollector",
     # Aviation
