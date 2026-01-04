@@ -237,6 +237,8 @@ Register for free tiers:
 |---------|---------|
 | Shodan | https://account.shodan.io/register |
 | AlienVault OTX | https://otx.alienvault.com/accounts/signup |
+| AISStream | https://aisstream.io/ |
+| Marinesia | https://marinesia.com/ |
 | Censys | https://censys.io/register |
 | GreyNoise | https://viz.greynoise.io/signup |
 | OpenSky | https://opensky-network.org/index.php |
@@ -246,15 +248,29 @@ Register for free tiers:
 
 ### AIS_Tracker Integration
 
-```python
-# Pull from AIS_Tracker API
-AIS_TRACKER_URL = "http://localhost:8080"
+The mapper uses **direct integration** with AIS_Tracker modules - no separate API server required!
 
-# Endpoints used:
-# GET /api/vessels - Active vessels
-# GET /api/alerts - Current alerts
-# GET /api/dark-ships - Dark vessel detections
-# GET /api/sanctions/check - Sanctions matches
+**Direct Integration (Recommended):**
+```bash
+# Clone AIS_Tracker next to this repo
+git clone https://github.com/arandomguyhere/AIS_Tracker.git ../AIS_Tracker
+
+# Set API keys for AIS data sources
+AISSTREAM_API_KEY=your_key_here    # Real-time vessel streaming
+MARINESIA_API_KEY=your_key_here    # Vessel info, port data (optional)
+```
+
+**Features from direct integration:**
+- Real-time vessel positions via AISStream WebSocket
+- Behavioral analysis (AIS gaps, spoofing, loitering)
+- Sanctions checking (FleetLeaks, OFAC)
+- Dark fleet detection and risk scoring
+- Flag of convenience detection
+
+**Fallback API mode:**
+```python
+# If direct integration unavailable, falls back to API
+AIS_TRACKER_URL = "http://localhost:8080"
 ```
 
 ### Google-News-Scraper Integration
@@ -277,11 +293,13 @@ NEWS_SCRAPER_FEED = "/path/to/Google-News-Scraper/docs/feed.json"
 - [x] Configuration system (sources.yaml, correlation_rules.yaml)
 - [x] Chokepoints definition (12 strategic locations)
 - [x] AIS_Tracker API connector
+- [x] Direct AIS_Tracker integration (no API server needed)
 - [x] News-Scraper feed ingester (60+ APT groups)
 - [x] Aviation collector (Airplanes.Live + OpenSky fallback)
 - [x] GPSJAM interference collector
 - [x] Correlation engine implementation
 - [x] Interactive Leaflet map (web dashboard)
+- [x] Settings UI for API key configuration
 - [x] Unit test suite (40 tests)
 - [ ] GDELT integration
 - [ ] GitHub Actions automation
