@@ -5,12 +5,14 @@ Uses AIS_Tracker modules directly instead of requiring API server.
 Imports functions from the cloned AIS_Tracker repository.
 """
 
+from __future__ import annotations  # Defer type annotation evaluation (PEP 563)
+
 import sys
 import os
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from pathlib import Path
 
 # Add AIS_Tracker to path
