@@ -27,7 +27,7 @@ class CyberInfrastructureConfig:
     shodan_base_url: str = "https://api.shodan.io"
     criminal_ip_base_url: str = "https://api.criminalip.io"
     leakix_base_url: str = "https://leakix.net"
-    zoomeye_base_url: str = "https://api.zoomeye.org"
+    zoomeye_base_url: str = "https://api.zoomeye.ai"
     netlas_base_url: str = "https://app.netlas.io/api"
 
     def get_available_sources(self) -> List[str]:
