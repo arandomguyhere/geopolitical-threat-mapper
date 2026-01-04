@@ -144,9 +144,11 @@ class IOCCollector(BaseCollector):
     async def init_session(self):
         """Initialize aiohttp session"""
         if self.session is None:
+            # Use standard browser User-Agent - some APIs block custom agents
             headers = {
-                "User-Agent": "GeopoliticalThreatMapper/1.0 (Security Research; https://github.com)",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json",
+                "Content-Type": "application/json",
             }
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=60),
@@ -382,12 +384,14 @@ class IOCCollector(BaseCollector):
         Contains: Malware distribution URLs
         """
         await self.init_session()
-        url = f"{self.config.cyber_ioc.urlhaus_url}/urls/recent/limit/{limit}/"
+        url = f"{self.config.cyber_ioc.urlhaus_url}/urls/recent/"
 
         results = []
 
         try:
-            async with self.session.get(url) as resp:
+            # URLhaus API requires POST with limit in body
+            payload = {"limit": str(limit)}
+            async with self.session.post(url, data=payload) as resp:
                 if resp.status != 200:
                     logger.error(f"URLhaus error: {resp.status}")
                     return []
