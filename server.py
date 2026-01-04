@@ -1186,12 +1186,17 @@ DASHBOARD_HTML = """
             try {
                 const resp = await fetch('/api/settings');
                 const data = await resp.json();
-                // Populate form fields with current values (masked)
+                // Show placeholder for existing keys, but DON'T fill input with masked value
                 Object.entries(data).forEach(([key, value]) => {
                     const input = apiKeysForm.querySelector(`[name="${key}"]`);
                     if (input) {
-                        input.value = value || '';
-                        input.placeholder = value ? '••••••••' : input.placeholder;
+                        // Only show non-masked values (URLs/paths), leave API keys empty
+                        if (value && !value.includes('•')) {
+                            input.value = value;
+                        } else {
+                            input.value = '';
+                            input.placeholder = value ? `Current: ${value}` : input.placeholder;
+                        }
                     }
                 });
             } catch (err) {
@@ -1226,9 +1231,10 @@ DASHBOARD_HTML = """
             const formData = new FormData(apiKeysForm);
             const settings = {};
             for (const [key, value] of formData.entries()) {
-                // Only include non-empty values (don't overwrite with empty)
-                if (value.trim()) {
-                    settings[key] = value.trim();
+                const trimmed = value.trim();
+                // Only include non-empty values that aren't masked placeholders
+                if (trimmed && !trimmed.includes('•')) {
+                    settings[key] = trimmed;
                 }
             }
 

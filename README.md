@@ -70,23 +70,17 @@ pip install -r requirements.txt
 
 ### Configuration
 
-1. Copy and configure environment variables:
+**Option 1: Settings UI (Recommended)**
+1. Start the web dashboard: `python server.py`
+2. Open http://localhost:8081
+3. Click **Settings** button
+4. Enter your API keys and click **Save**
+5. Restart `main.py` to apply
+
+**Option 2: Manual .env file**
 ```bash
 cp .env.example .env
-```
-
-2. Add your API keys:
-```bash
-# Required for full functionality
-SHODAN_API_KEY=your_key_here
-OTX_API_KEY=your_key_here
-
-# Optional but recommended
-CENSYS_API_ID=your_id_here
-CENSYS_API_SECRET=your_secret_here
-GREYNOISE_API_KEY=your_key_here
-OPENSKY_USERNAME=your_username
-OPENSKY_PASSWORD=your_password
+# Edit .env with your keys
 ```
 
 ### Run
@@ -174,16 +168,32 @@ The web dashboard (`server.py`) provides an interactive map at **http://localhos
 - Aircraft tracking with rotation based on heading (military=red, civilian=blue)
 - Strategic chokepoint overlays with polygon boundaries
 - Cyber threat markers by country (IOCs from Feodo, ThreatFox, OTX)
-- AIS vessel integration (when Arsenal Tracker running on port 8080)
+- AIS vessel integration with advanced visualization
+- Settings UI for API key configuration
 - Auto-refresh every 60 seconds
-- Sample data displayed when no feed.json exists
+
+**Vessel Tracking (Best-in-class):**
+- Ship icons with heading-based rotation (vessels point in direction of travel)
+- Risk-based coloring: Red (dark/critical), Orange (high), Blue (medium), Green (normal), Purple (sanctioned)
+- Click any vessel for detailed side panel with:
+  - Flag, name, type, MMSI, IMO
+  - Position, speed, course, heading, destination
+  - Risk indicators (AIS gaps, sanctions, STS transfers, flag of convenience)
+  - Dark fleet score (0-100)
+- Vessel search by MMSI, name, or IMO number
+- Dark fleet alert banner for high-risk vessels
 
 **Layer Controls:**
 - GPS Interference - Jamming/spoofing zones
 - Aviation - Individual aircraft with directional icons
 - Chokepoints - Strategic maritime choke points
-- AIS Vessels - Ship tracking (requires AIS_Tracker)
+- AIS Vessels - Ship tracking with risk visualization
 - Cyber Threats - IOC markers aggregated by country
+
+**Settings UI:**
+- Configure all API keys from the web interface
+- Keys are stored in `.env` file (created automatically)
+- Masked display for security (shows last 4 characters)
 
 **Cyber Threat Display:**
 - C2 servers, botnets, and malware IOCs from abuse.ch feeds
@@ -300,6 +310,7 @@ NEWS_SCRAPER_FEED = "/path/to/Google-News-Scraper/docs/feed.json"
 - [x] Correlation engine implementation
 - [x] Interactive Leaflet map (web dashboard)
 - [x] Settings UI for API key configuration
+- [x] Best-in-class vessel tracking (ship icons, details panel, search, risk scoring)
 - [x] Unit test suite (40 tests)
 - [ ] GDELT integration
 - [ ] GitHub Actions automation
