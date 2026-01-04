@@ -147,6 +147,7 @@ class InfrastructureCollector(BaseCollector):
         self.session: Optional[aiohttp.ClientSession] = None
         self.results: List[ExposedService] = []
         self.country_stats: Dict[str, CountryExposure] = {}
+        self._shodan_invalid = False  # Track if Shodan key already failed
 
     async def init_session(self):
         """Initialize aiohttp session"""
@@ -189,6 +190,10 @@ class InfrastructureCollector(BaseCollector):
             logger.warning("Shodan API key not configured")
             return []
 
+        # Skip if we already know the key is invalid
+        if self._shodan_invalid:
+            return []
+
         await self.init_session()
 
         # Add country filter if specified
@@ -204,7 +209,8 @@ class InfrastructureCollector(BaseCollector):
         try:
             async with self.session.get(url, params=params) as resp:
                 if resp.status == 401:
-                    logger.error("Shodan: Invalid API key")
+                    logger.error("Shodan: Invalid API key - skipping further queries")
+                    self._shodan_invalid = True
                     return []
                 if resp.status == 402:
                     logger.warning("Shodan: Query credits exhausted")
