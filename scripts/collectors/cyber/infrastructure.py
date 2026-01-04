@@ -209,11 +209,12 @@ class InfrastructureCollector(BaseCollector):
         try:
             async with self.session.get(url, params=params) as resp:
                 if resp.status == 401:
-                    logger.error("Shodan: Invalid API key - skipping further queries")
+                    logger.error("Shodan: Invalid API key or no query credits - skipping further queries")
                     self._shodan_invalid = True
                     return []
                 if resp.status == 402:
-                    logger.warning("Shodan: Query credits exhausted")
+                    logger.warning("Shodan: Query credits exhausted - skipping further queries")
+                    self._shodan_invalid = True
                     return []
                 if resp.status != 200:
                     logger.error(f"Shodan error: {resp.status}")
