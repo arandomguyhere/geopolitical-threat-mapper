@@ -148,6 +148,7 @@ class InfrastructureCollector(BaseCollector):
         self.results: List[ExposedService] = []
         self.country_stats: Dict[str, CountryExposure] = {}
         self._shodan_invalid = False  # Track if Shodan key already failed
+        self._shodan_credits_checked = False
 
     async def init_session(self):
         """Initialize aiohttp session"""
@@ -171,6 +172,41 @@ class InfrastructureCollector(BaseCollector):
     # SHODAN
     # =========================================================================
 
+    async def check_shodan_credits(self) -> Optional[int]:
+        """
+        Check available Shodan query credits before running searches.
+        Returns number of credits available, or None if check failed.
+        """
+        api_key = self.config.cyber_infrastructure.shodan_api_key
+        if not api_key:
+            return None
+
+        await self.init_session()
+        url = f"{self.config.cyber_infrastructure.shodan_base_url}/api-info"
+        params = {"key": api_key}
+
+        try:
+            async with self.session.get(url, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    credits = data.get("query_credits", 0)
+                    plan = data.get("plan", "unknown")
+                    logger.info(f"Shodan: {credits} query credits available (plan: {plan})")
+
+                    if credits == 0:
+                        logger.warning("Shodan: No query credits remaining - skipping infrastructure scans")
+                        self._shodan_invalid = True
+
+                    return credits
+                elif resp.status == 401:
+                    logger.error("Shodan: Invalid API key")
+                    self._shodan_invalid = True
+                    return None
+        except Exception as e:
+            logger.error(f"Shodan credit check error: {e}")
+
+        return None
+
     async def query_shodan(
         self,
         query: str,
@@ -190,9 +226,16 @@ class InfrastructureCollector(BaseCollector):
             logger.warning("Shodan API key not configured")
             return []
 
-        # Skip if we already know the key is invalid
+        # Skip if we already know the key is invalid or has no credits
         if self._shodan_invalid:
             return []
+
+        # Check credits on first query
+        if not self._shodan_credits_checked:
+            self._shodan_credits_checked = True
+            await self.check_shodan_credits()
+            if self._shodan_invalid:
+                return []
 
         await self.init_session()
 
