@@ -124,7 +124,9 @@ python server.py --port 9000
 | Source | Use Case | Rate Limit |
 |--------|----------|------------|
 | Shodan | Infrastructure exposure | 100/month |
-| Censys | Certificates, hosts | 250/month |
+| ZoomEye | Chinese cyberspace scanner | Free tier |
+| Netlas | Attack surface discovery | 50/day |
+| LeakIX | Exposed data/misconfigs | Free for researchers |
 | GreyNoise | Mass scanning detection | 50/day |
 | Criminal IP | IP intelligence | 50/day |
 
@@ -246,10 +248,12 @@ Register for free tiers:
 | Service | Sign Up |
 |---------|---------|
 | Shodan | https://account.shodan.io/register |
+| ZoomEye | https://www.zoomeye.org/login |
+| Netlas | https://app.netlas.io/registration/ |
+| LeakIX | https://leakix.net/auth/register |
 | AlienVault OTX | https://otx.alienvault.com/accounts/signup |
 | AISStream | https://aisstream.io/ |
 | Marinesia | https://marinesia.com/ |
-| Censys | https://censys.io/register |
 | GreyNoise | https://viz.greynoise.io/signup |
 | OpenSky | https://opensky-network.org/index.php |
 | NVD | https://nvd.nist.gov/developers/request-an-api-key |

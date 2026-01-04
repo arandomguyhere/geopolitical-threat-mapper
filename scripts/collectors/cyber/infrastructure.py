@@ -319,6 +319,7 @@ class InfrastructureCollector(BaseCollector):
     async def query_criminal_ip(
         self,
         query: str,
+        country: Optional[str] = None,
         limit: int = 100
     ) -> List[ExposedService]:
         """
@@ -329,11 +330,15 @@ class InfrastructureCollector(BaseCollector):
         """
         api_key = self.config.cyber_infrastructure.criminal_ip_api_key
         if not api_key:
-            logger.warning("Criminal IP API key not configured")
+            logger.debug("Criminal IP API key not configured")
             return []
 
         await self.init_session()
         url = f"{self.config.cyber_infrastructure.criminal_ip_base_url}/v1/asset/search"
+
+        # Add country filter if specified
+        if country:
+            query = f"{query} country:{country}"
 
         headers = {"x-api-key": api_key}
         params = {"query": query, "offset": 0}
@@ -380,6 +385,7 @@ class InfrastructureCollector(BaseCollector):
     async def query_leakix(
         self,
         query: str,
+        country: Optional[str] = None,
         limit: int = 100
     ) -> List[ExposedService]:
         """
@@ -389,11 +395,15 @@ class InfrastructureCollector(BaseCollector):
         """
         api_key = self.config.cyber_infrastructure.leakix_api_key
         if not api_key:
-            logger.warning("LeakIX API key not configured")
+            logger.debug("LeakIX API key not configured")
             return []
 
         await self.init_session()
         url = f"{self.config.cyber_infrastructure.leakix_base_url}/search"
+
+        # Add country filter if specified
+        if country:
+            query = f'{query} +country:"{country}"'
 
         headers = {
             "api-key": api_key,
@@ -435,8 +445,199 @@ class InfrastructureCollector(BaseCollector):
             return []
 
     # =========================================================================
+    # ZOOMEYE
+    # =========================================================================
+
+    async def query_zoomeye(
+        self,
+        query: str,
+        country: Optional[str] = None,
+        limit: int = 100
+    ) -> List[ExposedService]:
+        """
+        Query ZoomEye API
+
+        Free tier: Limited queries per month
+        Chinese Shodan alternative with good coverage
+        """
+        api_key = self.config.cyber_infrastructure.zoomeye_api_key
+        if not api_key:
+            logger.debug("ZoomEye API key not configured")
+            return []
+
+        await self.init_session()
+
+        # Add country filter if specified
+        if country:
+            query = f"{query} +country:{country}"
+
+        url = f"{self.config.cyber_infrastructure.zoomeye_base_url}/host/search"
+        headers = {
+            "API-KEY": api_key,
+            "Accept": "application/json",
+        }
+        params = {"query": query, "page": 1}
+
+        try:
+            async with self.session.get(url, headers=headers, params=params) as resp:
+                if resp.status == 401:
+                    logger.error("ZoomEye: Invalid API key")
+                    return []
+                if resp.status == 402:
+                    logger.warning("ZoomEye: Quota exceeded")
+                    return []
+                if resp.status != 200:
+                    logger.error(f"ZoomEye error: {resp.status}")
+                    return []
+
+                data = await resp.json()
+                results = []
+
+                for match in data.get("matches", [])[:limit]:
+                    portinfo = match.get("portinfo", {})
+                    geoinfo = match.get("geoinfo", {})
+
+                    service = ExposedService(
+                        ip=match.get("ip", ""),
+                        port=portinfo.get("port", 0),
+                        protocol=portinfo.get("protocol", "tcp"),
+                        service=portinfo.get("service", "unknown"),
+                        product=portinfo.get("product"),
+                        version=portinfo.get("version"),
+                        country=geoinfo.get("country", {}).get("names", {}).get("en"),
+                        country_code=geoinfo.get("country", {}).get("code"),
+                        city=geoinfo.get("city", {}).get("names", {}).get("en"),
+                        asn=geoinfo.get("asn"),
+                        org=geoinfo.get("organization"),
+                        source="zoomeye",
+                        raw_data=match,
+                    )
+                    results.append(service)
+
+                logger.info(f"ZoomEye: Found {len(results)} results for '{query}'")
+                return results
+
+        except Exception as e:
+            logger.error(f"ZoomEye query error: {e}")
+            return []
+
+    # =========================================================================
+    # NETLAS
+    # =========================================================================
+
+    async def query_netlas(
+        self,
+        query: str,
+        country: Optional[str] = None,
+        limit: int = 100
+    ) -> List[ExposedService]:
+        """
+        Query Netlas API
+
+        Free tier: 50 requests/day
+        Good for exposed services and SSL certificate data
+        """
+        api_key = self.config.cyber_infrastructure.netlas_api_key
+        if not api_key:
+            logger.debug("Netlas API key not configured")
+            return []
+
+        await self.init_session()
+
+        # Add country filter if specified
+        if country:
+            query = f"{query} AND geo.country:{country}"
+
+        url = f"{self.config.cyber_infrastructure.netlas_base_url}/responses/"
+        headers = {
+            "X-API-Key": api_key,
+            "Accept": "application/json",
+        }
+        params = {"q": query, "start": 0, "fields": "*"}
+
+        try:
+            async with self.session.get(url, headers=headers, params=params) as resp:
+                if resp.status == 401:
+                    logger.error("Netlas: Invalid API key")
+                    return []
+                if resp.status == 429:
+                    logger.warning("Netlas: Rate limit exceeded (50/day free)")
+                    return []
+                if resp.status != 200:
+                    logger.error(f"Netlas error: {resp.status}")
+                    return []
+
+                data = await resp.json()
+                results = []
+
+                for item in data.get("items", [])[:limit]:
+                    doc = item.get("data", {})
+                    geo = doc.get("geo", {})
+
+                    service = ExposedService(
+                        ip=doc.get("ip", ""),
+                        port=doc.get("port", 0),
+                        protocol=doc.get("protocol", "tcp"),
+                        service=doc.get("service", {}).get("name", "unknown"),
+                        product=doc.get("service", {}).get("product"),
+                        version=doc.get("service", {}).get("version"),
+                        country=geo.get("country"),
+                        country_code=geo.get("country_iso_code"),
+                        city=geo.get("city"),
+                        asn=doc.get("asn"),
+                        org=doc.get("as_org"),
+                        source="netlas",
+                        raw_data=doc,
+                    )
+                    results.append(service)
+
+                logger.info(f"Netlas: Found {len(results)} results for '{query}'")
+                return results
+
+        except Exception as e:
+            logger.error(f"Netlas query error: {e}")
+            return []
+
+    # =========================================================================
     # AGGREGATION
     # =========================================================================
+
+    async def query_all_sources(
+        self,
+        query: str,
+        country: Optional[str] = None,
+        limit: int = 50
+    ) -> List[ExposedService]:
+        """
+        Query all available infrastructure sources for a given query.
+        Falls through sources in priority order, collecting from each.
+        """
+        all_results: List[ExposedService] = []
+        seen_ips = set()  # Deduplicate by IP
+
+        # Priority order: Shodan (best) -> ZoomEye -> Netlas -> LeakIX -> CriminalIP
+        sources = [
+            ("shodan", self.query_shodan),
+            ("zoomeye", self.query_zoomeye),
+            ("netlas", self.query_netlas),
+            ("leakix", self.query_leakix),
+            ("criminal_ip", self.query_criminal_ip),
+        ]
+
+        for source_name, query_func in sources:
+            try:
+                results = await query_func(query, country=country, limit=limit)
+                for r in results:
+                    if r.ip not in seen_ips:
+                        seen_ips.add(r.ip)
+                        all_results.append(r)
+            except Exception as e:
+                logger.debug(f"{source_name} query failed: {e}")
+
+            # Small delay between sources
+            await asyncio.sleep(0.5)
+
+        return all_results
 
     async def collect_country_exposure(
         self,
@@ -444,7 +645,8 @@ class InfrastructureCollector(BaseCollector):
         categories: Optional[List[str]] = None
     ) -> CountryExposure:
         """
-        Collect exposure data for a specific country across all categories
+        Collect exposure data for a specific country across all categories.
+        Uses all configured infrastructure sources.
         """
         if categories is None:
             categories = list(self.STRATEGIC_QUERIES.keys())
@@ -459,8 +661,8 @@ class InfrastructureCollector(BaseCollector):
         for category in categories:
             queries = self.STRATEGIC_QUERIES.get(category, [])
             for query in queries[:2]:  # Limit queries to conserve credits
-                # Try Shodan first (most comprehensive)
-                results = await self.query_shodan(query, country=country_code, limit=50)
+                # Query all available sources
+                results = await self.query_all_sources(query, country=country_code, limit=50)
                 all_results.extend(results)
 
                 # Rate limit between queries
