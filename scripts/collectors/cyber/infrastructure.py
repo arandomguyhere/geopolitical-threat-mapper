@@ -413,6 +413,9 @@ class InfrastructureCollector(BaseCollector):
 
         try:
             async with self.session.get(url, headers=headers, params=params) as resp:
+                if resp.status == 204:
+                    # No content - empty results, not an error
+                    return []
                 if resp.status != 200:
                     logger.error(f"LeakIX error: {resp.status}")
                     return []
