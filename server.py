@@ -293,9 +293,21 @@ DASHBOARD_HTML = """
                 </div>
 
                 <div style="margin-bottom:20px;">
+                    <h3 style="color:#3498db;font-size:0.95rem;margin-bottom:10px;">Maritime (AIS)</h3>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">AISStream API Key <a href="https://aisstream.io/" target="_blank" style="color:#e94560;">(Get Key - Real-time)</a></label>
+                        <input type="text" name="AISSTREAM_API_KEY" placeholder="Enter AISStream API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">Marinesia API Key <a href="https://marinesia.com/" target="_blank" style="color:#e94560;">(Get Key - Optional)</a></label>
+                        <input type="text" name="MARINESIA_API_KEY" placeholder="Enter Marinesia API key" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
                     <h3 style="color:#3498db;font-size:0.95rem;margin-bottom:10px;">Integration</h3>
                     <div style="margin-bottom:10px;">
-                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">AIS Tracker URL</label>
+                        <label style="display:block;color:#888;font-size:0.8rem;margin-bottom:4px;">AIS Tracker URL (fallback)</label>
                         <input type="text" name="AIS_TRACKER_API_URL" placeholder="http://localhost:8080" style="width:100%;padding:8px;background:#16213e;border:1px solid #0f3460;color:#eee;border-radius:4px;">
                     </div>
                     <div style="margin-bottom:10px;">
@@ -955,18 +967,35 @@ def get_heatmap():
 
 @app.route("/api/ais")
 def get_ais_data():
-    """Proxy to AIS Tracker API"""
+    """Get AIS data - tries direct integration first, then API, then feed"""
     import requests
 
+    # Try direct AIS_Tracker integration first
     try:
-        # Try to fetch from AIS Tracker
+        import sys
+        ais_tracker_path = Path(__file__).parent.parent / "AIS_Tracker"
+        if ais_tracker_path.exists():
+            sys.path.insert(0, str(ais_tracker_path))
+            from scripts.collectors.maritime import DirectAISCollector
+
+            collector = DirectAISCollector()
+            if collector.is_available():
+                logger.debug("Using direct AIS integration")
+                data = collector.collect_all()
+                collector.close()
+                return jsonify(data)
+    except Exception as e:
+        logger.debug(f"Direct AIS integration not available: {e}")
+
+    # Try API-based AIS Tracker
+    try:
         resp = requests.get(f"{AIS_TRACKER_URL}/api/vessels", timeout=5)
         if resp.status_code == 200:
             return jsonify(resp.json())
     except Exception as e:
-        logger.debug(f"AIS Tracker not available: {e}")
+        logger.debug(f"AIS Tracker API not available: {e}")
 
-    # Return data from feed if AIS Tracker unavailable
+    # Return data from feed if both unavailable
     feed_path = OUTPUT_DIR / "feed.json"
     if feed_path.exists():
         with open(feed_path, "r", encoding="utf-8") as f:
@@ -997,6 +1026,8 @@ SETTINGS_KEYS = [
     "GREYNOISE_API_KEY",
     "OPENSKY_USERNAME",
     "OPENSKY_PASSWORD",
+    "AISSTREAM_API_KEY",
+    "MARINESIA_API_KEY",
     "AIS_TRACKER_API_URL",
     "NEWS_SCRAPER_FEED_PATH",
 ]

@@ -34,6 +34,7 @@ from scripts.collectors import (
     TelemetryCollector,
     VulnerabilityCollector,
     AISTrackerCollector,
+    DirectAISCollector,
     NewsScraperCollector,
     OpenSkyCollector,
     GPSJamCollector,
@@ -149,10 +150,33 @@ class ThreatMapper:
         return results
 
     async def collect_maritime(self) -> dict:
-        """Collect maritime intelligence from AIS_Tracker"""
+        """Collect maritime intelligence from AIS_Tracker (direct or API)"""
         logger.info("Collecting maritime intelligence...")
 
+        # Try direct integration first (no API server needed)
+        direct_collector = DirectAISCollector()
+        if direct_collector.is_available():
+            try:
+                logger.info("Using direct AIS_Tracker integration")
+                data = direct_collector.collect_all(regions=self.regions)
+
+                logger.info(
+                    f"Collected {data.get('statistics', {}).get('total_vessels', 0)} vessels, "
+                    f"{data.get('statistics', {}).get('dark_ships', 0)} dark ships (direct)"
+                )
+
+                # Ingest into correlation engine
+                self.engine.ingest_maritime_data(data)
+                direct_collector.close()
+
+                return data
+            except Exception as e:
+                logger.warning(f"Direct AIS integration failed: {e}, falling back to API")
+                direct_collector.close()
+
+        # Fallback to API-based collector
         ais_url = self._get_env("AIS_TRACKER_URL", "http://localhost:8080")
+        logger.info(f"Using AIS_Tracker API at {ais_url}")
 
         try:
             async with AISTrackerCollector(base_url=ais_url) as collector:
