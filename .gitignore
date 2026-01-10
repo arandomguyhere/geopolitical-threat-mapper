@@ -9,3 +9,13 @@ __pycache__/
 # Output files
 output/
 *.log
+
+# Build artifacts
+dist/
+*.egg-info/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -359,6 +359,14 @@ DASHBOARD_HTML = """
                 <div class="stat-value low" id="gps-zones">0</div>
                 <div class="stat-label">GPS Zones</div>
             </div>
+            <div class="stat">
+                <div class="stat-value" id="vix-value" style="color:#2ecc71;">--</div>
+                <div class="stat-label">VIX</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="oil-change" style="color:#888;">--%</div>
+                <div class="stat-label">Oil</div>
+            </div>
             <div class="vessel-search">
                 <input type="text" id="vessel-search-input" placeholder="Search MMSI/Name...">
                 <button id="vessel-search-btn">Search</button>
@@ -486,6 +494,36 @@ DASHBOARD_HTML = """
         <label class="layer-item">
             <input type="checkbox" id="layer-cyber" checked> Cyber Threats
         </label>
+        <label class="layer-item">
+            <input type="checkbox" id="layer-financial" checked> Financial Signals
+        </label>
+    </div>
+
+    <!-- Financial Panel (from situation-monitor) -->
+    <div id="financial-panel" style="position:absolute;bottom:30px;right:10px;z-index:1000;background:rgba(26,26,46,0.95);padding:15px;border-radius:8px;border:1px solid #0f3460;min-width:200px;">
+        <h4 style="color:#e94560;font-size:0.85rem;margin-bottom:10px;">Market Signals</h4>
+        <div id="market-signals" style="font-size:0.8rem;">
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f3460;">
+                <span style="color:#888;">VIX</span>
+                <span id="market-vix" style="font-weight:bold;">--</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f3460;">
+                <span style="color:#888;">Oil (WTI)</span>
+                <span id="market-oil">--</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f3460;">
+                <span style="color:#888;">Defense ETF</span>
+                <span id="market-defense">--</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f3460;">
+                <span style="color:#888;">BTC 24h</span>
+                <span id="market-btc">--</span>
+            </div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #0f3460;">
+                <span style="color:#888;font-size:0.75rem;">Momentum:</span>
+                <span id="market-momentum" style="font-weight:bold;margin-left:5px;">stable</span>
+            </div>
+        </div>
     </div>
 
     <div class="legend">
@@ -636,6 +674,7 @@ DASHBOARD_HTML = """
                 processAviationData(feed.aviation || []);
                 processChokepoints(chokepoints);
                 processCyberData(feed.cyber || {});
+                processFinancialData(feed.financial || {});
 
                 // Update stats display
                 updateStats();
@@ -643,8 +682,84 @@ DASHBOARD_HTML = """
                 // Try to load AIS data
                 loadAISData();
 
+                // Load financial data separately (real-time)
+                loadFinancialData();
+
             } catch (error) {
                 console.error('Error loading data:', error);
+            }
+        }
+
+        // Process financial data from feed
+        function processFinancialData(data) {
+            // Update VIX display
+            const vix = data.vix || {};
+            const vixValue = vix.value || 0;
+            const vixEl = document.getElementById('vix-value');
+            const marketVixEl = document.getElementById('market-vix');
+
+            if (vixValue > 0) {
+                const vixColor = vixValue >= 35 ? '#e94560' : vixValue >= 25 ? '#f39c12' : vixValue >= 20 ? '#3498db' : '#2ecc71';
+                vixEl.textContent = vixValue.toFixed(1);
+                vixEl.style.color = vixColor;
+                marketVixEl.textContent = vixValue.toFixed(1);
+                marketVixEl.style.color = vixColor;
+            }
+
+            // Update oil display
+            const commodities = data.commodities || [];
+            const oil = commodities.find(c => c.name && c.name.includes('WTI'));
+            if (oil) {
+                const oilEl = document.getElementById('oil-change');
+                const marketOilEl = document.getElementById('market-oil');
+                const change = oil.change_pct || 0;
+                const color = change >= 3 ? '#e94560' : change >= 1 ? '#f39c12' : change <= -1 ? '#2ecc71' : '#888';
+                oilEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+                oilEl.style.color = color;
+                marketOilEl.textContent = `$${oil.price?.toFixed(2) || '--'} (${change >= 0 ? '+' : ''}${change.toFixed(1)}%)`;
+                marketOilEl.style.color = color;
+            }
+
+            // Update defense sector
+            const sectors = data.sectors || [];
+            const defense = sectors.find(s => s.sector_type === 'defense');
+            if (defense) {
+                const defEl = document.getElementById('market-defense');
+                const change = defense.change_pct || 0;
+                const color = change >= 2 ? '#f39c12' : change <= -2 ? '#e94560' : '#888';
+                defEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+                defEl.style.color = color;
+            }
+
+            // Update BTC
+            const crypto = data.crypto || [];
+            const btc = crypto.find(c => c.symbol === 'BTC');
+            if (btc) {
+                const btcEl = document.getElementById('market-btc');
+                const change = btc.change_24h || 0;
+                const color = Math.abs(change) >= 5 ? '#f39c12' : '#888';
+                btcEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+                btcEl.style.color = color;
+            }
+
+            // Update momentum indicator
+            const momentum = data.momentum || 'stable';
+            const momEl = document.getElementById('market-momentum');
+            const momColors = { surging: '#e94560', rising: '#f39c12', stable: '#2ecc71', declining: '#3498db' };
+            momEl.textContent = momentum;
+            momEl.style.color = momColors[momentum] || '#888';
+        }
+
+        // Load financial data from API
+        async function loadFinancialData() {
+            try {
+                const resp = await fetch('/api/financial');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    processFinancialData(data);
+                }
+            } catch (error) {
+                console.log('Financial data not available:', error);
             }
         }
 
@@ -1343,6 +1458,63 @@ def get_heatmap():
             return jsonify(json.load(f))
 
     return jsonify({})
+
+
+@app.route("/api/financial")
+def get_financial():
+    """
+    Get financial market data (integrated from situation-monitor)
+
+    Returns real-time market signals for correlation:
+    - VIX volatility index
+    - Commodity prices (oil, gold)
+    - Sector ETFs (defense, energy)
+    - Crypto prices
+    """
+    # Try to load from financial collector
+    try:
+        import asyncio
+        from scripts.collectors.financial import FinancialCollector
+
+        collector = FinancialCollector()
+
+        # Run async collector in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            data = loop.run_until_complete(collector.collect_all())
+        finally:
+            loop.run_until_complete(collector.close())
+            loop.close()
+
+        return jsonify(data)
+
+    except Exception as e:
+        logger.warning(f"Financial collector not available: {e}")
+
+    # Return sample data if collector unavailable
+    return jsonify({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "source": "sample",
+        "vix": {
+            "value": 18.5,
+            "change_pct": 2.3,
+            "level": "normal",
+        },
+        "commodities": [
+            {"symbol": "CL=F", "name": "Crude Oil (WTI)", "price": 75.50, "change_pct": 1.2},
+            {"symbol": "GC=F", "name": "Gold", "price": 2050.00, "change_pct": 0.5},
+        ],
+        "sectors": [
+            {"symbol": "ITA", "name": "iShares Aerospace & Defense", "change_pct": 0.8, "sector_type": "defense"},
+            {"symbol": "XLE", "name": "Energy Select", "change_pct": 1.5, "sector_type": "energy"},
+        ],
+        "crypto": [
+            {"symbol": "BTC", "name": "Bitcoin", "price": 42000, "change_24h": 2.5},
+            {"symbol": "ETH", "name": "Ethereum", "price": 2200, "change_24h": 1.8},
+        ],
+        "momentum": "stable",
+    })
 
 
 @app.route("/api/ais")

@@ -390,6 +390,224 @@ rules:
         message: "Critical infrastructure exposure in {region}: {service_count} ICS/SCADA systems"
 
 # ============================================================================
+# FINANCIAL CORRELATION RULES (from situation-monitor integration)
+# ============================================================================
+
+  # HIGH: Chokepoint Market Impact
+  - id: chokepoint_market_impact
+    name: "Chokepoint Market Impact"
+    description: "Maritime incident causing significant market reaction"
+    priority: high
+    research_basis: "Houthi attacks caused 30% Suez transit drop, oil spike"
+    triggers:
+      - source: ais_tracker
+        conditions:
+          - field: event_type
+            in: ["attack", "distress", "disruption"]
+          - field: region
+            in: ["red_sea", "hormuz", "malacca", "taiwan_strait"]
+      - source: financial
+        conditions:
+          - field: event_type
+            value: "commodity_movement"
+          - field: change_pct
+            operator: ">="
+            value: 3
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "oil"
+              - "shipping"
+              - "supply chain"
+              - "freight"
+              - "tanker"
+    correlation:
+      require_sources: 2
+      time_window_hours: 6
+    actions:
+      - type: alert
+        severity: high
+        message: "Market impact: {commodity} {change_pct}% following {event_type} at {region}"
+      - type: update_risk_map
+        region: "{chokepoint_id}"
+        risk_delta: 15
+
+  # HIGH: Sanctions Market Signal
+  - id: sanctions_market_signal
+    name: "Sanctions Announcement Market Signal"
+    description: "Market movement correlating with sanctions activity"
+    priority: high
+    triggers:
+      - source: financial
+        conditions:
+          - field: sector_type
+            value: "defense"
+          - field: change_pct
+            operator: ">="
+            value: 2
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "sanctions"
+              - "OFAC"
+              - "treasury"
+              - "blacklist"
+              - "designation"
+      - source: ais_tracker
+        conditions:
+          - field: dark_fleet_activity
+            operator: ">="
+            value: 10
+    correlation:
+      require_sources: 2
+      time_window_hours: 24
+    actions:
+      - type: alert
+        severity: high
+        message: "Sanctions signal: defense sector {change_pct}%, {dark_fleet_count} dark vessels"
+
+  # HIGH: VIX Crisis Correlation
+  - id: vix_crisis_correlation
+    name: "VIX Crisis Indicator"
+    description: "Market volatility spike correlating with geopolitical events"
+    priority: high
+    triggers:
+      - source: financial
+        conditions:
+          - field: event_type
+            value: "volatility_spike"
+          - field: vix_value
+            operator: ">="
+            value: 30
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "crisis"
+              - "escalation"
+              - "conflict"
+              - "war"
+              - "invasion"
+      - source: cyber
+        conditions:
+          - field: attack_volume_surge
+            value: true
+    correlation:
+      require_sources: 2
+      time_window_hours: 12
+    actions:
+      - type: alert
+        severity: high
+        message: "Crisis indicator: VIX at {vix_value} with {event_type}"
+      - type: situation_report
+        template: "crisis_brief"
+
+  # MEDIUM: Energy Sector Cyber-Financial
+  - id: energy_cyber_financial
+    name: "Energy Sector Cyber-Financial Correlation"
+    description: "Cyber activity targeting energy with market movement"
+    priority: medium
+    triggers:
+      - source: cyber
+        conditions:
+          - field: target_sector
+            in: ["energy", "oil_gas", "utilities", "power"]
+      - source: financial
+        conditions:
+          - field: sector_type
+            value: "energy"
+          - field: change_pct
+            operator: ">="
+            value: 2
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "pipeline"
+              - "refinery"
+              - "power grid"
+              - "energy attack"
+    correlation:
+      require_sources: 2
+      time_window_hours: 24
+    actions:
+      - type: alert
+        severity: medium
+        message: "Energy sector correlation: cyber activity + {sector_change}% market move"
+
+  # MEDIUM: Crypto Sanctions Evasion Signal
+  - id: crypto_sanctions_evasion
+    name: "Crypto Sanctions Evasion Signal"
+    description: "Cryptocurrency volatility correlating with sanctions news"
+    priority: medium
+    triggers:
+      - source: financial
+        conditions:
+          - field: event_type
+            value: "crypto_volatility"
+          - field: change_24h
+            operator: ">="
+            value: 8
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "sanctions"
+              - "crypto"
+              - "bitcoin"
+              - "laundering"
+              - "evasion"
+      - source: ais_tracker
+        conditions:
+          - field: sts_transfer_count
+            operator: ">="
+            value: 3
+    correlation:
+      require_sources: 2
+      time_window_hours: 48
+    actions:
+      - type: alert
+        severity: medium
+        message: "Potential sanctions evasion: crypto {change_24h}% + {sts_count} STS transfers"
+
+  # MEDIUM: Defense Sector Escalation
+  - id: defense_sector_escalation
+    name: "Defense Sector Escalation Signal"
+    description: "Defense stocks surge correlating with military activity"
+    priority: medium
+    triggers:
+      - source: financial
+        conditions:
+          - field: sector_type
+            value: "defense"
+          - field: change_pct
+            operator: ">="
+            value: 3
+      - source: aviation
+        conditions:
+          - field: military_aircraft_count
+            operator: ">="
+            value: 15
+      - source: news_scraper
+        conditions:
+          - field: categories
+            contains_any:
+              - "military"
+              - "defense"
+              - "arms"
+              - "weapons"
+              - "contract"
+    correlation:
+      require_sources: 2
+      time_window_hours: 24
+    actions:
+      - type: alert
+        severity: medium
+        message: "Defense escalation: sector {change_pct}% + elevated military activity"
+
+# ============================================================================
 # SCORING CONFIGURATION
 # ============================================================================
 scoring:
@@ -403,11 +621,12 @@ scoring:
 
   # Regional threat composite score weights
   regional:
-    cyber_score: 0.30
-    maritime_activity: 0.25
-    news_sentiment: 0.20
+    cyber_score: 0.25
+    maritime_activity: 0.20
+    news_sentiment: 0.15
     gps_interference: 0.15
     aviation_anomaly: 0.10
+    financial_signal: 0.15  # Market data, commodities, VIX
 
   # Correlation confidence modifiers
   confidence:

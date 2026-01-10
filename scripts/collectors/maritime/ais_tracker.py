@@ -8,6 +8,8 @@ Connects to the user's AIS_Tracker API for maritime intelligence:
 - STS transfers
 - Cable proximity alerts
 - SAR detections
+
+Falls back to VesselScraper when primary API unavailable.
 """
 
 import asyncio
@@ -487,11 +489,11 @@ class AISTrackerCollector(BaseCollector):
                 await self.init_session()
             async with self.session.get(f"{self.base_url}/health", timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 if resp.status != 200:
-                    logger.warning(f"AIS_Tracker server unavailable (status {resp.status}) - skipping maritime collection")
-                    return self._empty_result()
+                    logger.warning(f"AIS_Tracker server unavailable (status {resp.status}) - using scraper fallback")
+                    return await self._fallback_to_scraper()
         except Exception as e:
-            logger.warning(f"AIS_Tracker server not running at {self.base_url} - skipping maritime collection")
-            return self._empty_result()
+            logger.warning(f"AIS_Tracker server not running at {self.base_url} - using scraper fallback")
+            return await self._fallback_to_scraper()
 
         all_vessels = []
         all_dark_ships = []
@@ -562,6 +564,54 @@ class AISTrackerCollector(BaseCollector):
                 "cable_risks": 0,
             }
         }
+
+    async def _fallback_to_scraper(self) -> Dict[str, Any]:
+        """Use VesselScraper as fallback when primary API unavailable"""
+        try:
+            from .vessel_scraper import VesselScraper
+            logger.info("Using VesselScraper fallback for maritime data")
+
+            scraper = VesselScraper()
+            try:
+                data = await scraper.collect_all()
+
+                # Convert scraper output to AIS tracker format
+                return {
+                    "timestamp": data["timestamp"],
+                    "source": "vessel_scraper_fallback",
+                    "vessels": data["vessels"],
+                    "dark_ships": [],  # Scraper can't detect dark ships
+                    "alerts": [],
+                    "sts_transfers": [],
+                    "cable_proximity": [],
+                    "chokepoint_summaries": {
+                        region: {
+                            "chokepoint_id": region,
+                            "timestamp": data["timestamp"],
+                            "total_vessels": stats["vessel_count"],
+                            "dark_ships": 0,
+                            "sts_transfers": 0,
+                            "risk_breakdown": {},
+                            "sanctions_vessels": stats["sanctioned_flags"],
+                            "cable_proximity": 0,
+                        }
+                        for region, stats in data["statistics"].get("by_region", {}).items()
+                    },
+                    "statistics": {
+                        "total_vessels": data["statistics"]["total_vessels"],
+                        "dark_ships": 0,
+                        "sts_transfers": 0,
+                        "active_alerts": 0,
+                        "cable_risks": 0,
+                        "shadow_fleet_flags": data["statistics"]["shadow_fleet_flags"],
+                        "sanctioned_flags": data["statistics"]["sanctioned_flags"],
+                    }
+                }
+            finally:
+                await scraper.close()
+        except Exception as e:
+            logger.error(f"VesselScraper fallback failed: {e}")
+            return self._empty_result()
 
     def _vessel_to_dict(self, vessel: Vessel) -> Dict[str, Any]:
         """Convert Vessel to dictionary"""
