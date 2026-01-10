@@ -220,21 +220,84 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
     </script>
     """
 
-    # Replace fetch calls with static data
+    # Replace fetch calls with live data fetchers
     static_loader = """
     <script>
-        // Override fetch for static mode
+        // Live data fetchers for static site
+        window.LIVE_DATA_CACHE = {};
+        window.LIVE_DATA_CACHE_TIME = {};
+        const CACHE_TTL = 60000; // 1 minute cache
+
+        async function fetchLiveFinancial() {
+            const now = Date.now();
+            if (window.LIVE_DATA_CACHE.financial && (now - window.LIVE_DATA_CACHE_TIME.financial) < CACHE_TTL) {
+                return window.LIVE_DATA_CACHE.financial;
+            }
+
+            const data = { vix: {}, commodities: [], crypto: [], sectors: [], momentum: 'stable' };
+
+            try {
+                // Fetch crypto from CoinGecko (public API)
+                const cryptoResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd&include_24hr_change=true');
+                if (cryptoResp.ok) {
+                    const crypto = await cryptoResp.json();
+                    data.crypto = [
+                        { symbol: 'BTC', name: 'Bitcoin', price: crypto.bitcoin?.usd || 0, change_24h: crypto.bitcoin?.usd_24h_change || 0 },
+                        { symbol: 'ETH', name: 'Ethereum', price: crypto.ethereum?.usd || 0, change_24h: crypto.ethereum?.usd_24h_change || 0 },
+                        { symbol: 'USDT', name: 'Tether', price: crypto.tether?.usd || 1, change_24h: crypto.tether?.usd_24h_change || 0 }
+                    ];
+                }
+
+                // Fetch fear & greed as VIX proxy
+                const fgiResp = await fetch('https://api.alternative.me/fng/?limit=1');
+                if (fgiResp.ok) {
+                    const fgi = await fgiResp.json();
+                    const value = parseInt(fgi.data?.[0]?.value || 50);
+                    // Invert: fear (low) = high VIX, greed (high) = low VIX
+                    const vixProxy = Math.round((100 - value) * 0.4 + 10);
+                    data.vix = {
+                        value: vixProxy,
+                        level: vixProxy > 30 ? 'elevated' : vixProxy > 20 ? 'normal' : 'low',
+                        fear_greed: fgi.data?.[0]?.value_classification || 'Neutral'
+                    };
+                }
+
+                // Calculate momentum from BTC change
+                const btcChange = data.crypto[0]?.change_24h || 0;
+                if (btcChange > 5) data.momentum = 'surging';
+                else if (btcChange > 2) data.momentum = 'rising';
+                else if (btcChange < -5) data.momentum = 'declining';
+                else data.momentum = 'stable';
+
+            } catch (e) {
+                console.warn('Live financial fetch error:', e);
+            }
+
+            window.LIVE_DATA_CACHE.financial = data;
+            window.LIVE_DATA_CACHE_TIME.financial = now;
+            return data;
+        }
+
+        async function fetchLiveGPS() {
+            // GPS data requires scraping, return sample for demo
+            return window.FEED_DATA?.gps || { interference_zones: [] };
+        }
+
+        // Override fetch for static mode with live data
         if (window.STATIC_MODE) {
             const originalFetch = window.fetch;
             window.fetch = async function(url, options) {
                 if (url === '/api/feed') {
-                    return { ok: true, json: async () => window.FEED_DATA };
+                    const financial = await fetchLiveFinancial();
+                    const feed = { ...window.FEED_DATA, financial, timestamp: new Date().toISOString() };
+                    return { ok: true, json: async () => feed };
                 }
                 if (url === '/api/chokepoints') {
                     return { ok: true, json: async () => window.CHOKEPOINTS };
                 }
                 if (url === '/api/financial') {
-                    return { ok: true, json: async () => window.FEED_DATA.financial || {} };
+                    const financial = await fetchLiveFinancial();
+                    return { ok: true, json: async () => financial };
                 }
                 if (url === '/api/ais') {
                     return { ok: true, json: async () => ({ vessels: [], statistics: {} }) };
@@ -244,15 +307,28 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
                 }
                 return originalFetch(url, options);
             };
+
+            // Auto-refresh live data every 60 seconds
+            setInterval(async () => {
+                window.LIVE_DATA_CACHE = {};
+                if (typeof loadData === 'function') loadData();
+            }, 60000);
         }
     </script>
     """
 
-    # Add static mode banner
+    # Add live data banner
     static_banner = """
-    <div id="static-mode-banner" style="position:fixed;top:0;left:50%;transform:translateX(-50%);background:#f39c12;color:#000;padding:5px 15px;border-radius:0 0 5px 5px;font-size:0.75rem;z-index:9999;">
-        Static Demo Mode - Data may not be live
+    <div id="static-mode-banner" style="position:fixed;top:0;left:50%;transform:translateX(-50%);background:#2ecc71;color:#000;padding:5px 15px;border-radius:0 0 5px 5px;font-size:0.75rem;z-index:9999;">
+        <span id="live-indicator" style="display:inline-block;width:8px;height:8px;background:#fff;border-radius:50%;margin-right:6px;animation:pulse 2s infinite;"></span>
+        Live Data - Crypto &amp; Fear/Greed Index
     </div>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
     """
 
     # Insert scripts after <head>

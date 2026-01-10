@@ -1,6 +1,9 @@
 # Geopolitical Threat Mapper
 
-A multi-layer situational awareness platform that correlates cyber threats, maritime activity, aviation data, GPS interference, and news events to provide real-time geopolitical intelligence.
+A multi-layer situational awareness platform that correlates cyber threats, maritime activity, aviation data, GPS interference, financial markets, and news events to provide real-time geopolitical intelligence.
+
+[![CI](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/ci.yml/badge.svg)](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/deploy-pages.yml)
 
 ## Architecture
 
@@ -9,36 +12,41 @@ A multi-layer situational awareness platform that correlates cyber threats, mari
 │                    GEOPOLITICAL THREAT MAPPER                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  YOUR EXISTING REPOS (FOUNDATION)                                   │
-│  ┌─────────────────────┐  ┌─────────────────────┐                  │
-│  │   AIS_Tracker       │  │ Google-News-Scraper │                  │
-│  │   (Maritime Intel)  │  │   (Threat News)     │                  │
-│  └──────────┬──────────┘  └──────────┬──────────┘                  │
-│             │                        │                              │
-│  NEW DATA SOURCES                    │                              │
-│  ┌──────────┴────────────────────────┴──────────┐                  │
-│  │  Shodan │ Censys │ OTX │ OpenSky │ GPSJAM   │                   │
-│  └──────────────────────────────────────────────┘                  │
+│  DATA SOURCES                                                       │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐  │
+│  │ AIS_Tracker │ │ News/RSS    │ │ Financial   │ │ Cyber Intel │  │
+│  │ (Maritime)  │ │ (50+ feeds) │ │ (Markets)   │ │ (APT/IOCs)  │  │
+│  └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘  │
+│         │               │               │               │          │
+│  ┌──────┴───────────────┴───────────────┴───────────────┴──────┐  │
+│  │  OpenSky │ GPSJAM │ Shodan │ OTX │ VesselFinder │ FRED     │  │
+│  └──────────────────────────────────────────────────────────────┘  │
 │                              │                                      │
 │            ┌─────────────────┴──────────────────┐                  │
 │            │      CORRELATION ENGINE            │                  │
+│            │  (6 domains: cyber, maritime,      │                  │
+│            │   aviation, GPS, news, financial)  │                  │
 │            └─────────────────┬──────────────────┘                  │
 │                              │                                      │
 │            ┌─────────────────┴──────────────────┐                  │
-│            │  Threat Feed │ Heatmap │ Alerts    │                  │
+│            │  Threat Feed │ Dashboard │ Alerts  │                  │
 │            └────────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- **Multi-Layer Correlation**: Connects cyber threats with maritime, aviation, and news data
+- **Multi-Layer Correlation**: Connects 6 intelligence domains (cyber, maritime, aviation, GPS, news, financial)
 - **Real-Time Monitoring**: Track 6 strategic chokepoints globally
+- **Financial Market Signals**: VIX, oil prices, defense ETFs, crypto for geopolitical correlation
+- **Narrative Tracking**: Disinformation detection with fringe → mainstream migration analysis
+- **50+ RSS Feeds**: Curated news from mainstream, defense, think tanks, and regional sources
 - **Cyber Threat Heatmap**: Regional exposure scoring from Shodan, OTX, and abuse.ch
 - **APT Tracking**: Integration with your Google-News-Scraper's 60+ APT groups
-- **Maritime Intelligence**: Leverages your AIS_Tracker for dark ships and sanctions
+- **Maritime Intelligence**: Leverages your AIS_Tracker + bulk vessel scraper fallback
 - **Aviation Overlay**: Military aircraft detection via OpenSky Network
 - **GPS Interference**: Spoofing/jamming detection from GPSJAM
+- **GitHub Pages Demo**: Static site deployment for live demos
 
 ## Monitored Regions
 
@@ -146,11 +154,20 @@ python server.py --port 9000
 |--------|----------|------------------|
 | GPSJAM.org | Interference map | Daily |
 
-### Events
+### Events & News
 
 | Source | Use Case | Rate Limit |
 |--------|----------|------------|
 | GDELT Project | Global events | Unlimited |
+| 50+ RSS Feeds | Curated news sources | Unlimited |
+
+### Financial Markets
+
+| Source | Use Case | Rate Limit |
+|--------|----------|------------|
+| CoinGecko | Crypto prices (BTC, ETH, stablecoins) | Unlimited |
+| Yahoo Finance | VIX, commodities, sector ETFs | Unlimited |
+| FRED | Federal Reserve data | Unlimited |
 
 ## Output Files
 
@@ -191,6 +208,14 @@ The web dashboard (`server.py`) provides an interactive map at **http://localhos
 - Chokepoints - Strategic maritime choke points
 - AIS Vessels - Ship tracking with risk visualization
 - Cyber Threats - IOC markers aggregated by country
+- Financial Signals - Market indicator markers
+
+**Market Signals Panel:**
+- VIX fear index with color-coded levels
+- Crude oil price and daily change
+- Defense sector ETF performance
+- Bitcoin price as sanctions/capital flight indicator
+- Market momentum indicator (surging/rising/stable/declining)
 
 **Settings UI:**
 - Configure all API keys from the web interface
@@ -222,22 +247,30 @@ See `config/correlation_rules.yaml` for full definitions.
 geopolitical-threat-mapper/
 ├── main.py                    # Data collection orchestrator
 ├── server.py                  # Web dashboard (port 8081)
+├── build_static.py            # Static site generator for GitHub Pages
 ├── requirements.txt
 ├── .env.example               # Environment template
+├── .github/
+│   └── workflows/
+│       ├── ci.yml             # Lint, test, build
+│       └── deploy-pages.yml   # GitHub Pages deployment
 ├── scripts/
 │   ├── config/
-│   │   ├── sources.yaml           # Data source configuration
+│   │   ├── sources.yaml           # Data source + RSS feeds
 │   │   ├── correlation_rules.yaml # Correlation rule definitions
+│   │   ├── locations.yaml         # Conflict zones, bases, cables
 │   │   └── chokepoints.geojson    # Strategic chokepoint polygons
 │   ├── collectors/
 │   │   ├── cyber/                 # Shodan, OTX, abuse.ch, NVD
-│   │   ├── maritime/              # AIS_Tracker integration
+│   │   ├── maritime/              # AIS_Tracker + VesselScraper
 │   │   ├── aviation/              # OpenSky/Airplanes.Live
+│   │   ├── financial/             # Markets, commodities, crypto
 │   │   ├── gps/                   # GPSJAM interference
 │   │   └── news/                  # News scraper integration
 │   └── processors/
-│       └── correlation_engine.py  # Multi-source correlation
-├── tests/                     # 40 unit tests
+│       ├── correlation_engine.py  # Multi-source correlation
+│       └── narrative_tracker.py   # Disinformation detection
+├── tests/                     # Unit tests
 └── output/                    # Generated files
 ```
 
@@ -315,9 +348,14 @@ NEWS_SCRAPER_FEED = "/path/to/Google-News-Scraper/docs/feed.json"
 - [x] Interactive Leaflet map (web dashboard)
 - [x] Settings UI for API key configuration
 - [x] Best-in-class vessel tracking (ship icons, details panel, search, risk scoring)
-- [x] Unit test suite (40 tests)
+- [x] Unit test suite
+- [x] Financial market integration (VIX, commodities, crypto, defense ETFs)
+- [x] Narrative/disinformation tracking
+- [x] 50+ RSS feed aggregation
+- [x] Bulk vessel scraper fallback
+- [x] GitHub Actions CI/CD
+- [x] GitHub Pages static deployment
 - [ ] GDELT integration
-- [ ] GitHub Actions automation
 - [ ] Alert notifications (Slack, Discord)
 
 ## Contributing
