@@ -5,6 +5,8 @@ A multi-layer situational awareness platform that correlates cyber threats, mari
 [![CI](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/ci.yml/badge.svg)](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/ci.yml)
 [![Deploy to GitHub Pages](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/arandomguyhere/geopolitical-threat-mapper/actions/workflows/deploy-pages.yml)
 
+**[Live Demo](https://arandomguyhere.github.io/geopolitical-threat-mapper/)** - Interactive map with live crypto & market data
+
 ## Architecture
 
 ```
