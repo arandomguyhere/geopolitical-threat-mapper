@@ -228,17 +228,26 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
         window.LIVE_DATA_CACHE_TIME = {};
         const CACHE_TTL = 60000; // 1 minute cache
 
+        // Store original fetch before overriding
+        const _originalFetch = window.fetch.bind(window);
+
         async function fetchLiveFinancial() {
             const now = Date.now();
             if (window.LIVE_DATA_CACHE.financial && (now - window.LIVE_DATA_CACHE_TIME.financial) < CACHE_TTL) {
                 return window.LIVE_DATA_CACHE.financial;
             }
 
-            const data = { vix: {}, commodities: [], crypto: [], sectors: [], momentum: 'stable' };
+            const data = {
+                vix: { value: 0, level: 'normal' },
+                commodities: [],
+                crypto: [],
+                sectors: [{ sector_type: 'defense', change_pct: 0 }],
+                momentum: 'stable'
+            };
 
             try {
                 // Fetch crypto from CoinGecko (public API)
-                const cryptoResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd&include_24hr_change=true');
+                const cryptoResp = await _originalFetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether&vs_currencies=usd&include_24hr_change=true');
                 if (cryptoResp.ok) {
                     const crypto = await cryptoResp.json();
                     data.crypto = [
@@ -246,10 +255,11 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
                         { symbol: 'ETH', name: 'Ethereum', price: crypto.ethereum?.usd || 0, change_24h: crypto.ethereum?.usd_24h_change || 0 },
                         { symbol: 'USDT', name: 'Tether', price: crypto.tether?.usd || 1, change_24h: crypto.tether?.usd_24h_change || 0 }
                     ];
+                    console.log('Crypto data loaded:', data.crypto);
                 }
 
                 // Fetch fear & greed as VIX proxy
-                const fgiResp = await fetch('https://api.alternative.me/fng/?limit=1');
+                const fgiResp = await _originalFetch('https://api.alternative.me/fng/?limit=1');
                 if (fgiResp.ok) {
                     const fgi = await fgiResp.json();
                     const value = parseInt(fgi.data?.[0]?.value || 50);
@@ -258,8 +268,10 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
                     data.vix = {
                         value: vixProxy,
                         level: vixProxy > 30 ? 'elevated' : vixProxy > 20 ? 'normal' : 'low',
-                        fear_greed: fgi.data?.[0]?.value_classification || 'Neutral'
+                        fear_greed: fgi.data?.[0]?.value_classification || 'Neutral',
+                        fear_greed_value: value
                     };
+                    console.log('Fear/Greed data loaded:', data.vix);
                 }
 
                 // Calculate momentum from BTC change
@@ -278,40 +290,59 @@ def modify_html_for_static(html: str, feed_data: dict, chokepoints: list) -> str
             return data;
         }
 
-        async function fetchLiveGPS() {
-            // GPS data requires scraping, return sample for demo
-            return window.FEED_DATA?.gps || { interference_zones: [] };
-        }
-
         // Override fetch for static mode with live data
         if (window.STATIC_MODE) {
-            const originalFetch = window.fetch;
             window.fetch = async function(url, options) {
-                if (url === '/api/feed') {
-                    const financial = await fetchLiveFinancial();
-                    const feed = { ...window.FEED_DATA, financial, timestamp: new Date().toISOString() };
-                    return { ok: true, json: async () => feed };
+                if (typeof url === 'string') {
+                    if (url === '/api/feed') {
+                        const financial = await fetchLiveFinancial();
+                        const feed = { ...window.FEED_DATA, financial, timestamp: new Date().toISOString() };
+                        return { ok: true, json: async () => feed };
+                    }
+                    if (url === '/api/chokepoints') {
+                        return { ok: true, json: async () => window.CHOKEPOINTS };
+                    }
+                    if (url === '/api/financial') {
+                        const financial = await fetchLiveFinancial();
+                        return { ok: true, json: async () => financial };
+                    }
+                    if (url === '/api/ais') {
+                        return { ok: true, json: async () => ({ vessels: [], statistics: {} }) };
+                    }
+                    if (url.startsWith('/api/')) {
+                        return { ok: true, json: async () => ({}) };
+                    }
                 }
-                if (url === '/api/chokepoints') {
-                    return { ok: true, json: async () => window.CHOKEPOINTS };
-                }
-                if (url === '/api/financial') {
-                    const financial = await fetchLiveFinancial();
-                    return { ok: true, json: async () => financial };
-                }
-                if (url === '/api/ais') {
-                    return { ok: true, json: async () => ({ vessels: [], statistics: {} }) };
-                }
-                if (url.startsWith('/api/')) {
-                    return { ok: true, json: async () => ({}) };
-                }
-                return originalFetch(url, options);
+                return _originalFetch(url, options);
             };
+
+            // Wait for processFinancialData to be defined, then load live data
+            async function initLiveData() {
+                // Wait up to 5 seconds for the function to be available
+                for (let i = 0; i < 50; i++) {
+                    if (typeof processFinancialData === 'function') {
+                        console.log('Loading live financial data...');
+                        const financial = await fetchLiveFinancial();
+                        processFinancialData(financial);
+                        return true;
+                    }
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                console.warn('processFinancialData not found');
+                return false;
+            }
+
+            // Start loading after a short delay to ensure page scripts have loaded
+            setTimeout(initLiveData, 500);
 
             // Auto-refresh live data every 60 seconds
             setInterval(async () => {
+                console.log('Refreshing live data...');
                 window.LIVE_DATA_CACHE = {};
-                if (typeof loadData === 'function') loadData();
+                const financial = await fetchLiveFinancial();
+                if (typeof processFinancialData === 'function') {
+                    processFinancialData(financial);
+                }
             }, 60000);
         }
     </script>
