@@ -381,6 +381,155 @@ sources:
       enabled: true
 
   # ============================================================================
+  # RSS NEWS FEEDS (from situation-monitor)
+  # ============================================================================
+  rss_feeds:
+    # Mainstream News
+    mainstream:
+      - name: "BBC World"
+        url: "https://feeds.bbci.co.uk/news/world/rss.xml"
+        category: "news"
+      - name: "Reuters World"
+        url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best"
+        category: "news"
+      - name: "NPR World"
+        url: "https://feeds.npr.org/1004/rss.xml"
+        category: "news"
+      - name: "The Guardian World"
+        url: "https://www.theguardian.com/world/rss"
+        category: "news"
+      - name: "AP News"
+        url: "https://rsshub.app/apnews/topics/apf-topnews"
+        category: "news"
+
+    # Financial News
+    financial:
+      - name: "CNBC"
+        url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
+        category: "financial"
+      - name: "MarketWatch"
+        url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+        category: "financial"
+      - name: "Yahoo Finance"
+        url: "https://finance.yahoo.com/news/rssindex"
+        category: "financial"
+      - name: "Bloomberg Politics"
+        url: "https://feeds.bloomberg.com/politics/news.rss"
+        category: "financial"
+
+    # Defense & Security
+    defense:
+      - name: "Defense One"
+        url: "https://www.defenseone.com/rss/all/"
+        category: "defense"
+      - name: "War on the Rocks"
+        url: "https://warontherocks.com/feed/"
+        category: "defense"
+      - name: "Breaking Defense"
+        url: "https://breakingdefense.com/feed/"
+        category: "defense"
+      - name: "The Drive - War Zone"
+        url: "https://www.thedrive.com/the-war-zone/feed"
+        category: "defense"
+
+    # Think Tanks
+    think_tanks:
+      - name: "CSIS"
+        url: "https://www.csis.org/analysis/feed"
+        category: "analysis"
+      - name: "Brookings"
+        url: "https://www.brookings.edu/feed/"
+        category: "analysis"
+      - name: "CFR"
+        url: "https://www.cfr.org/rss.xml"
+        category: "analysis"
+      - name: "Atlantic Council"
+        url: "https://www.atlanticcouncil.org/feed/"
+        category: "analysis"
+
+    # Regional
+    regional:
+      - name: "Al-Monitor Middle East"
+        url: "https://www.al-monitor.com/rss"
+        category: "regional"
+      - name: "The Diplomat Asia"
+        url: "https://thediplomat.com/feed/"
+        category: "regional"
+      - name: "Kyiv Independent"
+        url: "https://kyivindependent.com/feed/"
+        category: "regional"
+
+    # Government
+    government:
+      - name: "White House"
+        url: "https://www.whitehouse.gov/feed/"
+        category: "government"
+      - name: "State Department"
+        url: "https://www.state.gov/rss-feed/press-releases/feed/"
+        category: "government"
+      - name: "Treasury OFAC"
+        url: "https://home.treasury.gov/system/files/126/ofac_rss.xml"
+        category: "government"
+
+    # Cyber Security
+    cyber:
+      - name: "CISA Alerts"
+        url: "https://www.cisa.gov/uscert/ncas/alerts.xml"
+        category: "cyber"
+      - name: "Krebs on Security"
+        url: "https://krebsonsecurity.com/feed/"
+        category: "cyber"
+      - name: "Schneier on Security"
+        url: "https://www.schneier.com/feed/"
+        category: "cyber"
+      - name: "The Record"
+        url: "https://therecord.media/feed"
+        category: "cyber"
+
+  # ============================================================================
+  # FINANCIAL DATA SOURCES (from situation-monitor)
+  # ============================================================================
+  financial:
+    coingecko:
+      api_url: "https://api.coingecko.com/api/v3"
+      api_key: null  # Free tier, no key required
+      rate_limit:
+        requests: 30
+        period: "minute"
+      priority: medium
+      use_for:
+        - crypto_prices
+        - market_cap
+        - 24h_volume
+      enabled: true
+
+    fred:
+      api_url: "https://fred.stlouisfed.org"
+      api_key: "${FRED_API_KEY}"  # Optional, better rate limits
+      rate_limit:
+        requests: 120
+        period: "minute"
+      priority: medium
+      use_for:
+        - fed_balance_sheet
+        - economic_indicators
+        - interest_rates
+      enabled: true
+
+    yahoo_finance:
+      base_url: "https://query1.finance.yahoo.com/v8/finance"
+      api_key: null  # No key required
+      rate_limit:
+        requests: 100
+        period: "hour"
+      priority: high
+      use_for:
+        - commodities
+        - sector_etfs
+        - vix
+      enabled: true
+
+  # ============================================================================
   # GEOPOLITICAL EVENTS
   # ============================================================================
   events:

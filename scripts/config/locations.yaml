@@ -1,0 +1,506 @@
+# Geographic Constants for Threat Mapping
+# Integrated from situation-monitor constants.js
+#
+# Provides location data for:
+# - Conflict zones (active and potential)
+# - Military installations
+# - Critical infrastructure
+# - Intelligence monitoring centers
+# - Subsea cable routes
+
+# ============================================================================
+# CONFLICT ZONES (from situation-monitor)
+# ============================================================================
+conflict_zones:
+  # Middle East
+  middle_east:
+    - name: "Gaza Strip"
+      lat: 31.5
+      lon: 34.47
+      status: "active"
+      actors: ["Israel", "Hamas", "PIJ"]
+
+    - name: "West Bank"
+      lat: 31.9
+      lon: 35.2
+      status: "active"
+      actors: ["Israel", "PA", "Settlers"]
+
+    - name: "Southern Lebanon"
+      lat: 33.3
+      lon: 35.5
+      status: "active"
+      actors: ["Israel", "Hezbollah"]
+
+    - name: "Yemen - Houthi Territory"
+      lat: 15.5
+      lon: 44.2
+      status: "active"
+      actors: ["Houthis", "Saudi Coalition", "UAE"]
+
+    - name: "Syria - Idlib"
+      lat: 35.93
+      lon: 36.63
+      status: "active"
+      actors: ["Syria", "Turkey", "HTS", "Russia"]
+
+    - name: "Iraq - Kurdistan Border"
+      lat: 36.8
+      lon: 43.0
+      status: "tension"
+      actors: ["Iraq", "Turkey", "PKK", "Iran"]
+
+    - name: "Strait of Hormuz"
+      lat: 26.5
+      lon: 56.5
+      status: "tension"
+      actors: ["Iran", "IRGC", "US Navy", "UK Navy"]
+
+  # Ukraine-Russia
+  ukraine_russia:
+    - name: "Donbas - Bakhmut Axis"
+      lat: 48.6
+      lon: 38.0
+      status: "active"
+      actors: ["Ukraine", "Russia", "Wagner"]
+
+    - name: "Zaporizhzhia Front"
+      lat: 47.5
+      lon: 35.5
+      status: "active"
+      actors: ["Ukraine", "Russia"]
+
+    - name: "Kherson Region"
+      lat: 46.6
+      lon: 32.6
+      status: "active"
+      actors: ["Ukraine", "Russia"]
+
+    - name: "Crimea"
+      lat: 45.0
+      lon: 34.0
+      status: "occupied"
+      actors: ["Russia", "Ukraine"]
+
+    - name: "Kursk Border"
+      lat: 51.7
+      lon: 36.2
+      status: "active"
+      actors: ["Ukraine", "Russia"]
+
+    - name: "Belgorod Border"
+      lat: 50.6
+      lon: 36.6
+      status: "tension"
+      actors: ["Russia", "Ukraine"]
+
+    - name: "Black Sea"
+      lat: 44.0
+      lon: 34.0
+      status: "active"
+      actors: ["Ukraine", "Russia", "Turkey"]
+
+    - name: "Kaliningrad"
+      lat: 54.7
+      lon: 20.5
+      status: "tension"
+      actors: ["Russia", "NATO", "Lithuania", "Poland"]
+
+  # China-Taiwan
+  china_taiwan:
+    - name: "Taiwan Strait"
+      lat: 24.0
+      lon: 119.5
+      status: "tension"
+      actors: ["China", "Taiwan", "US"]
+
+    - name: "Kinmen Islands"
+      lat: 24.45
+      lon: 118.4
+      status: "tension"
+      actors: ["Taiwan", "China"]
+
+    - name: "Matsu Islands"
+      lat: 26.15
+      lon: 119.95
+      status: "tension"
+      actors: ["Taiwan", "China"]
+
+    - name: "ADIZ Median Line"
+      lat: 24.5
+      lon: 121.0
+      status: "incursions"
+      actors: ["China PLA", "Taiwan AF"]
+
+    - name: "South China Sea - Spratlys"
+      lat: 10.0
+      lon: 114.0
+      status: "tension"
+      actors: ["China", "Vietnam", "Philippines", "Malaysia"]
+
+    - name: "Scarborough Shoal"
+      lat: 15.2
+      lon: 117.8
+      status: "tension"
+      actors: ["China", "Philippines"]
+
+    - name: "Second Thomas Shoal"
+      lat: 9.75
+      lon: 115.87
+      status: "active"
+      actors: ["China", "Philippines"]
+
+    - name: "Senkaku/Diaoyu Islands"
+      lat: 25.75
+      lon: 123.5
+      status: "tension"
+      actors: ["Japan", "China"]
+
+  # Other Regions
+  other:
+    - name: "Korean DMZ"
+      lat: 38.0
+      lon: 127.0
+      status: "tension"
+      actors: ["North Korea", "South Korea", "US"]
+
+    - name: "Kashmir LOC"
+      lat: 34.5
+      lon: 74.5
+      status: "tension"
+      actors: ["India", "Pakistan"]
+
+    - name: "Nagorno-Karabakh"
+      lat: 39.8
+      lon: 46.8
+      status: "post-conflict"
+      actors: ["Armenia", "Azerbaijan"]
+
+    - name: "Ethiopia - Tigray"
+      lat: 14.0
+      lon: 38.5
+      status: "post-conflict"
+      actors: ["Ethiopia", "Eritrea", "TPLF"]
+
+    - name: "Sudan - Khartoum"
+      lat: 15.6
+      lon: 32.5
+      status: "active"
+      actors: ["SAF", "RSF"]
+
+    - name: "Myanmar - Rakhine"
+      lat: 20.5
+      lon: 93.5
+      status: "active"
+      actors: ["Myanmar Military", "AA", "Rohingya"]
+
+# ============================================================================
+# MILITARY INSTALLATIONS (from situation-monitor)
+# ============================================================================
+military_bases:
+  us_bases:
+    - name: "Diego Garcia"
+      lat: -7.32
+      lon: 72.42
+      type: "naval_air"
+      region: "indian_ocean"
+
+    - name: "Camp Humphreys"
+      lat: 37.0
+      lon: 127.0
+      type: "army"
+      region: "korea"
+
+    - name: "Kadena Air Base"
+      lat: 26.35
+      lon: 127.77
+      type: "air_force"
+      region: "japan"
+
+    - name: "Yokosuka Naval Base"
+      lat: 35.3
+      lon: 139.65
+      type: "naval"
+      region: "japan"
+
+    - name: "Al Udeid Air Base"
+      lat: 25.12
+      lon: 51.32
+      type: "air_force"
+      region: "qatar"
+
+    - name: "Ramstein Air Base"
+      lat: 49.44
+      lon: 7.6
+      type: "air_force"
+      region: "germany"
+
+    - name: "Guam - Andersen AFB"
+      lat: 13.58
+      lon: 144.93
+      type: "air_force"
+      region: "pacific"
+
+    - name: "Pearl Harbor"
+      lat: 21.35
+      lon: -157.97
+      type: "naval"
+      region: "pacific"
+
+    - name: "Bahrain - Fifth Fleet"
+      lat: 26.2
+      lon: 50.55
+      type: "naval"
+      region: "persian_gulf"
+
+    - name: "Djibouti - Camp Lemonnier"
+      lat: 11.55
+      lon: 43.15
+      type: "joint"
+      region: "horn_of_africa"
+
+  russian_bases:
+    - name: "Sevastopol"
+      lat: 44.6
+      lon: 33.5
+      type: "naval"
+      region: "black_sea"
+
+    - name: "Tartus"
+      lat: 34.89
+      lon: 35.87
+      type: "naval"
+      region: "mediterranean"
+
+    - name: "Khmeimim"
+      lat: 35.41
+      lon: 35.95
+      type: "air_force"
+      region: "syria"
+
+    - name: "Kaliningrad"
+      lat: 54.7
+      lon: 20.5
+      type: "exclave"
+      region: "baltic"
+
+    - name: "Vladivostok"
+      lat: 43.12
+      lon: 131.9
+      type: "naval"
+      region: "pacific"
+
+  chinese_bases:
+    - name: "Hainan - Yulin"
+      lat: 18.22
+      lon: 109.55
+      type: "naval_submarine"
+      region: "south_china_sea"
+
+    - name: "Djibouti Support Base"
+      lat: 11.59
+      lon: 43.15
+      type: "support"
+      region: "horn_of_africa"
+
+    - name: "Fiery Cross Reef"
+      lat: 9.55
+      lon: 112.89
+      type: "artificial_island"
+      region: "south_china_sea"
+
+    - name: "Mischief Reef"
+      lat: 9.9
+      lon: 115.53
+      type: "artificial_island"
+      region: "south_china_sea"
+
+    - name: "Subi Reef"
+      lat: 10.92
+      lon: 114.08
+      type: "artificial_island"
+      region: "south_china_sea"
+
+# ============================================================================
+# CRITICAL INFRASTRUCTURE
+# ============================================================================
+infrastructure:
+  nuclear_facilities:
+    - name: "Natanz"
+      lat: 33.72
+      lon: 51.73
+      country: "IR"
+      type: "enrichment"
+
+    - name: "Fordow"
+      lat: 34.88
+      lon: 51.0
+      country: "IR"
+      type: "enrichment"
+
+    - name: "Bushehr"
+      lat: 28.83
+      lon: 50.88
+      country: "IR"
+      type: "reactor"
+
+    - name: "Dimona"
+      lat: 31.0
+      lon: 35.15
+      country: "IL"
+      type: "reactor"
+
+    - name: "Yongbyon"
+      lat: 39.8
+      lon: 125.75
+      country: "KP"
+      type: "reactor_enrichment"
+
+    - name: "Zaporizhzhia NPP"
+      lat: 47.5
+      lon: 34.58
+      country: "UA"
+      type: "reactor"
+      status: "occupied"
+
+  subsea_cables:
+    # Baltic cables (targets of recent sabotage)
+    - name: "C-Lion1"
+      endpoints: ["Finland", "Germany"]
+      region: "baltic_sea"
+      status: "damaged_2024"
+
+    - name: "BCS East-West Interlink"
+      endpoints: ["Sweden", "Lithuania"]
+      region: "baltic_sea"
+      status: "damaged_2024"
+
+    - name: "Estlink 2"
+      endpoints: ["Estonia", "Finland"]
+      region: "baltic_sea"
+      status: "operational"
+
+    # Major global cables
+    - name: "SEA-ME-WE 6"
+      endpoints: ["Singapore", "France"]
+      region: "global"
+      status: "under_construction"
+
+    - name: "2Africa"
+      endpoints: ["Multiple Africa", "Europe", "Middle East"]
+      region: "global"
+      status: "under_construction"
+
+    - name: "Asia-America Gateway"
+      endpoints: ["Southeast Asia", "US West Coast"]
+      region: "pacific"
+      status: "operational"
+
+# ============================================================================
+# INTELLIGENCE MONITORING CENTERS (from situation-monitor)
+# ============================================================================
+intel_centers:
+  - name: "Pine Gap"
+    lat: -23.8
+    lon: 133.74
+    country: "AU"
+    type: "SIGINT"
+    operators: ["NSA", "ASD"]
+
+  - name: "Menwith Hill"
+    lat: 54.0
+    lon: -1.69
+    country: "GB"
+    type: "SIGINT"
+    operators: ["NSA", "GCHQ"]
+
+  - name: "Bad Aibling"
+    lat: 47.87
+    lon: 12.0
+    country: "DE"
+    type: "SIGINT"
+    operators: ["NSA", "BND"]
+
+  - name: "Misawa"
+    lat: 40.7
+    lon: 141.37
+    country: "JP"
+    type: "SIGINT"
+    operators: ["NSA", "JSDF"]
+
+  - name: "Waihopai"
+    lat: -41.6
+    lon: 173.78
+    country: "NZ"
+    type: "SIGINT"
+    operators: ["GCSB"]
+
+# ============================================================================
+# CYBER THREAT ACTORS BY COUNTRY (from situation-monitor)
+# ============================================================================
+cyber_actors:
+  russia:
+    - APT28
+    - APT29
+    - Sandworm
+    - Turla
+    - Gamaredon
+    - Star Blizzard
+    - Midnight Blizzard
+    - Forest Blizzard
+
+  china:
+    - APT1
+    - APT10
+    - APT31
+    - APT40
+    - APT41
+    - Volt Typhoon
+    - Salt Typhoon
+    - Flax Typhoon
+    - Mustang Panda
+
+  north_korea:
+    - APT37
+    - APT38
+    - Lazarus
+    - Kimsuky
+    - Andariel
+    - BlueNoroff
+
+  iran:
+    - APT33
+    - APT34
+    - APT35
+    - APT39
+    - Charming Kitten
+    - MuddyWater
+    - OilRig
+
+# ============================================================================
+# SANCTIONS SEVERITY BY COUNTRY
+# ============================================================================
+sanctions:
+  comprehensive:  # Full embargo
+    - RU  # Russia (sectoral)
+    - IR  # Iran
+    - KP  # North Korea
+    - SY  # Syria
+    - CU  # Cuba
+    - VE  # Venezuela (partial)
+
+  targeted:  # Entity-specific
+    - BY  # Belarus
+    - MM  # Myanmar
+    - ZW  # Zimbabwe
+    - SD  # Sudan
+    - LB  # Lebanon (Hezbollah)
+    - IQ  # Iraq (entities)
+
+  shadow_fleet_flags:  # High risk for sanctions evasion
+    - CM  # Cameroon
+    - GA  # Gabon
+    - GN  # Guinea
+    - PW  # Palau
+    - TG  # Togo
+    - TZ  # Tanzania

@@ -40,6 +40,7 @@ class EventSource(Enum):
     AVIATION = "aviation"
     GPS = "gps"
     NEWS = "news"
+    FINANCIAL = "financial"  # Market data, commodities, prediction markets
 
 
 @dataclass
@@ -90,8 +91,10 @@ class ThreatScore:
     aviation_score: float
     gps_score: float
     news_score: float
+    financial_score: float  # Market volatility, commodity spikes
     active_correlations: int
     trend: str  # increasing, stable, decreasing
+    momentum: str = "stable"  # surging, rising, stable, declining
 
 
 class CorrelationEngine:
@@ -119,6 +122,7 @@ class CorrelationEngine:
             "aviation": [],
             "gps": [],
             "news": [],
+            "financial": [],
         }
 
         # Active correlations
@@ -425,6 +429,129 @@ class CorrelationEngine:
 
         return len(events)
 
+    def ingest_financial_data(self, data: Dict[str, Any]):
+        """
+        Ingest financial/market intelligence data
+
+        Supports data from:
+        - Commodities (oil, gold, etc.)
+        - Crypto markets (Bitcoin, Ethereum)
+        - Sector ETFs (defense, energy)
+        - Prediction markets (Polymarket)
+        - Fed data (balance sheet)
+        """
+        events = []
+
+        # Commodity price movements
+        for commodity in data.get("commodities", []):
+            change_pct = commodity.get("change_pct", 0)
+            if abs(change_pct) >= 2:  # Significant movement
+                severity = "critical" if abs(change_pct) >= 5 else "high" if abs(change_pct) >= 3 else "medium"
+                event = Event(
+                    id=f"financial_commodity_{commodity.get('symbol')}",
+                    source=EventSource.FINANCIAL,
+                    event_type="commodity_movement",
+                    timestamp=datetime.utcnow(),
+                    entities={
+                        "symbol": commodity.get("symbol"),
+                        "name": commodity.get("name"),
+                        "change_pct": change_pct,
+                        "price": commodity.get("price"),
+                    },
+                    severity=severity,
+                    confidence=0.9,
+                    description=f"{commodity.get('name', commodity.get('symbol'))}: {change_pct:+.1f}%",
+                    raw_data=commodity,
+                )
+                events.append(event)
+
+        # Sector movements (defense, energy, etc.)
+        for sector in data.get("sectors", []):
+            change_pct = sector.get("change_pct", 0)
+            if abs(change_pct) >= 1.5:  # Significant sector movement
+                severity = "high" if abs(change_pct) >= 3 else "medium"
+                event = Event(
+                    id=f"financial_sector_{sector.get('symbol')}",
+                    source=EventSource.FINANCIAL,
+                    event_type="sector_movement",
+                    timestamp=datetime.utcnow(),
+                    entities={
+                        "symbol": sector.get("symbol"),
+                        "name": sector.get("name"),
+                        "sector_type": sector.get("sector_type"),
+                        "change_pct": change_pct,
+                    },
+                    severity=severity,
+                    description=f"Sector {sector.get('name')}: {change_pct:+.1f}%",
+                    raw_data=sector,
+                )
+                events.append(event)
+
+        # Crypto volatility (relevant for sanctions evasion signals)
+        for crypto in data.get("crypto", []):
+            change_pct = crypto.get("change_24h", 0)
+            if abs(change_pct) >= 5:  # High crypto volatility
+                event = Event(
+                    id=f"financial_crypto_{crypto.get('symbol')}",
+                    source=EventSource.FINANCIAL,
+                    event_type="crypto_volatility",
+                    timestamp=datetime.utcnow(),
+                    entities={
+                        "symbol": crypto.get("symbol"),
+                        "change_24h": change_pct,
+                        "price": crypto.get("price"),
+                    },
+                    severity="medium",
+                    description=f"{crypto.get('symbol')}: {change_pct:+.1f}% (24h)",
+                    raw_data=crypto,
+                )
+                events.append(event)
+
+        # Prediction market signals (geopolitical events)
+        for prediction in data.get("predictions", []):
+            # Track significant probability changes
+            prob_change = prediction.get("probability_change", 0)
+            if abs(prob_change) >= 10:  # 10% swing in prediction
+                event = Event(
+                    id=f"financial_prediction_{prediction.get('id')}",
+                    source=EventSource.FINANCIAL,
+                    event_type="prediction_market",
+                    timestamp=datetime.utcnow(),
+                    entities={
+                        "question": prediction.get("question"),
+                        "probability": prediction.get("probability"),
+                        "probability_change": prob_change,
+                        "category": prediction.get("category"),
+                    },
+                    severity="high" if abs(prob_change) >= 20 else "medium",
+                    description=f"Prediction shift: {prediction.get('question', '')[:50]}... ({prob_change:+.0f}%)",
+                    raw_data=prediction,
+                )
+                events.append(event)
+
+        # VIX / volatility index
+        vix = data.get("vix", {})
+        if vix.get("value", 0) >= 25:  # Elevated fear
+            event = Event(
+                id=f"financial_vix_{datetime.utcnow().strftime('%Y%m%d')}",
+                source=EventSource.FINANCIAL,
+                event_type="volatility_spike",
+                timestamp=datetime.utcnow(),
+                entities={
+                    "vix_value": vix.get("value"),
+                    "vix_change": vix.get("change_pct", 0),
+                },
+                severity="critical" if vix.get("value", 0) >= 35 else "high",
+                description=f"VIX elevated: {vix.get('value'):.1f}",
+                raw_data=vix,
+            )
+            events.append(event)
+
+        self.event_buffer["financial"].extend(events)
+        self._prune_buffer("financial")
+
+        return len(events)
+
     def _prune_buffer(self, source: str, max_age_hours: int = 24, max_size: int = 1000):
         """Remove old events from buffer"""
         cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
@@ -468,6 +595,8 @@ class CorrelationEngine:
                 "cyber": "cyber",
                 "aviation": "aviation",
                 "gps": "gps",
+                "financial": "financial",
+                "markets": "financial",
             }
             source_key = source_map.get(source, source)
 
@@ -680,14 +809,16 @@ class CorrelationEngine:
         aviation_score = normalize(counts["aviation"], 30)
         gps_score = normalize(counts["gps"], 5)
         news_score = normalize(counts["news"], 10)
+        financial_score = normalize(counts["financial"], 10)
 
-        # Apply weights
+        # Apply weights (financial adds economic signal layer)
         overall = (
-            cyber_score * scoring.get("cyber_score", 0.30) +
-            maritime_score * scoring.get("maritime_activity", 0.25) +
-            news_score * scoring.get("news_sentiment", 0.20) +
+            cyber_score * scoring.get("cyber_score", 0.25) +
+            maritime_score * scoring.get("maritime_activity", 0.20) +
+            news_score * scoring.get("news_sentiment", 0.15) +
             gps_score * scoring.get("gps_interference", 0.15) +
-            aviation_score * scoring.get("aviation_anomaly", 0.10)
+            aviation_score * scoring.get("aviation_anomaly", 0.10) +
+            financial_score * scoring.get("financial_signal", 0.15)
         )
 
         # Add correlation boost
@@ -710,6 +841,9 @@ class CorrelationEngine:
         else:
             trend = "new"
 
+        # Calculate momentum (ported from situation-monitor)
+        momentum = self._calculate_momentum(region, overall, prev_score)
+
         score = ThreatScore(
             region=region,
             timestamp=datetime.utcnow(),
@@ -719,12 +853,52 @@ class CorrelationEngine:
             aviation_score=aviation_score,
             gps_score=gps_score,
             news_score=news_score,
+            financial_score=financial_score,
             active_correlations=active_corr,
             trend=trend,
+            momentum=momentum,
         )
 
         self.region_scores[region] = score
         return score
+
+    def _calculate_momentum(
+        self,
+        region: str,
+        current_score: float,
+        prev_score: Optional[ThreatScore]
+    ) -> str:
+        """
+        Calculate momentum indicator (ported from situation-monitor intelligence.js)
+
+        Momentum tracks rate of change, not just direction:
+        - surging: rapid increase (>10 points in short time)
+        - rising: moderate increase (5-10 points)
+        - stable: little change (<5 points)
+        - declining: decrease (>5 points down)
+        """
+        if not prev_score:
+            return "stable"
+
+        delta = current_score - prev_score.overall_score
+
+        # Check time since last score
+        time_delta = (datetime.utcnow() - prev_score.timestamp).total_seconds() / 60
+
+        # Normalize delta by time (per 10 minutes, like situation-monitor)
+        if time_delta > 0:
+            rate = (delta / time_delta) * 10
+        else:
+            rate = delta
+
+        if rate >= 10:
+            return "surging"
+        elif rate >= 5:
+            return "rising"
+        elif rate <= -5:
+            return "declining"
+        else:
+            return "stable"
 
     def get_threat_heatmap(self) -> Dict[str, Any]:
         """Generate threat heatmap for all regions"""
@@ -739,7 +913,9 @@ class CorrelationEngine:
                 "aviation_score": score.aviation_score,
                 "gps_score": score.gps_score,
                 "news_score": score.news_score,
+                "financial_score": score.financial_score,
                 "trend": score.trend,
+                "momentum": score.momentum,
                 "active_correlations": score.active_correlations,
                 "threat_level": self._score_to_level(score.overall_score),
             }
@@ -751,6 +927,7 @@ class CorrelationEngine:
                 "critical_regions": [r for r, d in heatmap.items() if d["threat_level"] == "critical"],
                 "high_regions": [r for r, d in heatmap.items() if d["threat_level"] == "high"],
                 "increasing_regions": [r for r, d in heatmap.items() if d["trend"] == "increasing"],
+                "surging_regions": [r for r, d in heatmap.items() if d["momentum"] == "surging"],
             }
         }
 
